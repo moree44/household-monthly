@@ -13,6 +13,8 @@
   --danger: #dc2626;
   --info: #0891b2;
   --font-sans: "Inter", "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * {
@@ -22,6 +24,7 @@
 html {
   min-height: 100%;
   background: var(--background);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -39,6 +42,9 @@ body {
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
 }
 
 button,

@@ -24,6 +24,7 @@ Tujuan utama:
 - Custom username/password auth
 - Lucide React
 - Plus Jakarta Sans
+- PWA metadata for iOS Safari Add to Home Screen
 
 Dev script menggunakan webpack:
 
@@ -59,6 +60,7 @@ Verification:
 ```bash
 npm run lint
 npx tsc --noEmit
+npm run build
 ```
 
 Prisma Studio:
@@ -75,6 +77,53 @@ Jalankan dari folder project, bukan dari `/home/moree`.
 - `istri` / `password123`
 
 Ganti password sebelum pemakaian serius/deploy.
+
+## Laptop Setup Handoff - 2026-06-12
+
+Sesi laptop WSL berhasil dibuat sebagai environment kerja kedua.
+
+Yang sudah dilakukan di laptop:
+
+- Install dan pakai Node.js 22 via `nvm`.
+- Install PostgreSQL 16 lokal di WSL.
+- Buat database lokal `household_monthly`.
+- Set password user PostgreSQL `postgres` menjadi `postgres`.
+- Copy `.env.example` ke `.env`.
+- Install dependency dengan `npm install`.
+- Jalankan Prisma migration:
+  - `20260605142214_init`
+  - `20260605153000_rename_dana_isi_rumah_to_tabungan_rumah`
+  - `20260609000000_add_goals`
+- Generate Prisma Client.
+- Jalankan seed data.
+- App berhasil jalan lokal dengan seed user:
+  - `suami` / `password123`
+  - `istri` / `password123`
+- Test PWA iPhone lewat Cloudflare Tunnel quick URL.
+
+Catatan laptop:
+
+- Setelah WSL/Cursor restart, shell bisa kembali memakai Node 18. Jalankan:
+
+```bash
+nvm use 22
+```
+
+- PostgreSQL juga bisa mati setelah WSL restart. Jalankan:
+
+```bash
+sudo service postgresql start
+```
+
+- Untuk test iPhone lokal yang paling stabil, gunakan production mode + Cloudflare Tunnel:
+
+```bash
+npm run build
+npm run start -- --hostname 0.0.0.0
+cloudflared tunnel --url http://localhost:3000
+```
+
+- Jangan commit file lokal seperti `.env`, `.next`, `node_modules`, atau installer `.deb`.
 
 ## Completed Features
 
@@ -99,6 +148,7 @@ Ganti password sebelum pemakaian serius/deploy.
   - active/deleted
   - type
   - week within month
+- Deleted History tetap dapat difilter berdasarkan tipe transaksi.
 - Category management.
 - Wallet management.
 - User management.
@@ -113,6 +163,13 @@ Ganti password sebelum pemakaian serius/deploy.
   - History
   - Goals
   - Profile
+- PWA setup untuk iOS Safari:
+  - manifest
+  - generated app icons
+  - Add to Home Screen metadata
+  - iPhone safe-area top/bottom handling
+- Dashboard Recent Transactions memakai icon per tipe transaksi.
+- Delete/restore confirmation di History tidak overflow ke kanan pada mobile.
 
 ## Important Product Decisions
 
@@ -206,6 +263,8 @@ Bottom navigation:
 
 Main FAB opens Catat / Expense flow.
 
+PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navigation uses iPhone safe-area spacing.
+
 ## Current User Preferences
 
 - User prefers Indonesian casual discussion.
@@ -216,6 +275,7 @@ Main FAB opens Catat / Expense flow.
 - Keep transaction input fast, especially on phone.
 - Category icons can be done later.
 - Deployment target is likely GitHub private + Vercel + cloud PostgreSQL.
+- User prefers testing on iPhone Safari / Add to Home Screen before production deploy.
 
 ## Known Gotchas
 
@@ -225,21 +285,50 @@ Main FAB opens Catat / Expense flow.
 - Codex chat session does not move automatically to laptop. Read this file, README, PRD, and workflow doc in the new session.
 - If port 3000 is busy in WSL, check running Next process or WSL relay.
 - Browser extension can cause React hydration warning by injecting HTML attributes. Test in incognito if needed.
+- Cloudflare Tunnel quick URLs are temporary and public while the tunnel process is running.
+- `next-env.d.ts` may flip between `.next/dev/types/routes.d.ts` and `.next/types/routes.d.ts` after dev/build; do not commit this flip unless intentionally needed.
 
 ## Recommended Next Steps
 
-1. Audit transaction flow:
+1. Commit current laptop changes:
+   - PWA manifest/icons/iOS safe area
+   - History deleted type filter fix
+   - History delete/restore confirm overflow fix
+   - Dashboard Recent Transactions icons
+   - Documentation updates
+2. Push to GitHub private repo.
+3. Pull on PC utama and run:
+   - `npm install` if dependency changes exist
+   - `npm run prisma:migrate`
+   - `npm run lint`
+   - `npx tsc --noEmit`
+   - `npm run build`
+4. Manual transaction checklist on iPhone/PWA:
    - Expense create/edit/delete/restore
    - Transfer create/edit/delete/restore
    - Top Up create/edit/delete/restore
    - Dashboard and wallet balance after each action
-2. Polish Profile/settings detail if needed.
-3. Add category/wallet icons later.
-4. Prepare GitHub private repo.
-5. Decide database strategy:
+5. Change default seed passwords before serious use.
+6. Decide database strategy:
    - local PostgreSQL per device, or
    - cloud PostgreSQL shared by PC/laptop/Vercel.
-6. Deploy to Vercel after MVP flow is stable.
+7. Prepare cloud PostgreSQL and Vercel deployment.
+8. Polish PWA smoothness if needed:
+   - route loading skeletons
+   - stronger bottom-nav pressed states
+   - route/data prefetch where useful
+9. Polish Profile/settings detail if needed.
+10. Add category/wallet icons later.
+
+## Not Done Yet
+
+- Current changes are not committed yet.
+- Current changes are not pushed to GitHub yet.
+- Vercel deployment is not configured yet.
+- Cloud PostgreSQL is not configured yet.
+- Default passwords are not changed yet.
+- Full manual transaction checklist on iPhone PWA is not completed yet.
+- Route transitions are functional but can still be made smoother with loading skeletons/prefetch polish.
 
 ## GitHub Handoff Plan
 

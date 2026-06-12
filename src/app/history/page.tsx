@@ -90,7 +90,7 @@ function buildHistoryParams({
 }) {
   return {
     ...(statusFilter === "deleted" ? { status: "deleted" } : {}),
-    ...(statusFilter === "active" && typeFilter !== "all" ? { type: typeFilter } : {}),
+    ...(typeFilter !== "all" ? { type: typeFilter } : {}),
     ...(weekFilter !== "all" ? { week: weekFilter } : {})
   };
 }
@@ -208,36 +208,34 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
           ))}
           </div>
 
-          {history.statusFilter === "active" ? (
-            <div className="mt-3">
-              <p className="px-1 text-[10px] font-bold uppercase tracking-normal text-[#737373]">Tipe</p>
-              <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {filters.map((filter) => (
-                  <Link
-                    key={filter.value}
-                    href={withMonthParam(
-                      "/history",
-                      history.monthKey,
-                      buildHistoryParams({
-                        statusFilter: history.statusFilter,
-                        typeFilter: filter.value,
-                        weekFilter: history.weekFilter
-                      })
-                    )}
-                    className={cn(
-                      "inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition",
-                      history.typeFilter === filter.value
-                        ? "bg-[#171717] text-[#FAFAFA]"
-                        : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
-                    )}
-                    style={history.typeFilter === filter.value ? { color: "#FAFAFA" } : undefined}
-                  >
-                    {filter.label}
-                  </Link>
-                ))}
-              </div>
+          <div className="mt-3">
+            <p className="px-1 text-[10px] font-bold uppercase tracking-normal text-[#737373]">Tipe</p>
+            <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {filters.map((filter) => (
+                <Link
+                  key={filter.value}
+                  href={withMonthParam(
+                    "/history",
+                    history.monthKey,
+                    buildHistoryParams({
+                      statusFilter: history.statusFilter,
+                      typeFilter: filter.value,
+                      weekFilter: history.weekFilter
+                    })
+                  )}
+                  className={cn(
+                    "inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition",
+                    history.typeFilter === filter.value
+                      ? "bg-[#171717] text-[#FAFAFA]"
+                      : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
+                  )}
+                  style={history.typeFilter === filter.value ? { color: "#FAFAFA" } : undefined}
+                >
+                  {filter.label}
+                </Link>
+              ))}
             </div>
-          ) : null}
+          </div>
 
           <div className="mt-2">
             <div className="flex items-center justify-between gap-3 px-1">
@@ -312,7 +310,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                       <article
                         key={transaction.id}
                         className={cn(
-                          "rounded-[18px] px-3 py-3 shadow-sm",
+                          "relative rounded-[18px] px-3 py-3 shadow-sm",
                           history.statusFilter === "deleted" ? "bg-[#E5E5E5]" : "bg-[#FAFAFA]"
                         )}
                       >

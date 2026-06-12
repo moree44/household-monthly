@@ -57,6 +57,20 @@ const quickActions = [
   }
 ];
 
+const transactionIcon = {
+  expense: ArrowUpRight,
+  top_up: ArrowDownLeft,
+  transfer: ArrowRightLeft,
+  adjustment: Settings
+};
+
+const transactionIconTone = {
+  expense: "bg-[#E5E5E5] text-[#525252]",
+  top_up: "bg-[#171717] text-[#FAFAFA]",
+  transfer: "bg-[#E5E5E5] text-[#525252]",
+  adjustment: "bg-amber-50 text-amber-700"
+};
+
 function MoneyBagIcon({ size = 17, strokeWidth = 1.9 }: { size?: number; strokeWidth?: number }) {
   return (
     <svg
@@ -271,33 +285,39 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <div className="overflow-hidden rounded-[18px] bg-white shadow-sm">
               {dashboard.recentTransactions.length > 0 ? (
                 <div className="divide-y divide-[#E5E5E5]">
-                  {dashboard.recentTransactions.map((transaction, index) => (
-                    <div key={transaction.id} className="flex items-center gap-3 px-4 py-3">
-                      <span
-                        className={cn(
-                          "h-10 w-10 shrink-0 rounded-[12px]",
-                          index % 2 === 0 ? "bg-[#E5E5E5]" : "bg-[#262626]"
-                        )}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-[#171717]">
-                          {transaction.title}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-[#737373]">
-                          {transaction.subtitle}
-                          {transaction.note ? ` · ${transaction.note}` : ""}
+                  {dashboard.recentTransactions.map((transaction) => {
+                    const Icon = transactionIcon[transaction.type];
+
+                    return (
+                      <div key={transaction.id} className="flex items-center gap-3 px-4 py-3">
+                        <span
+                          className={cn(
+                            "grid h-10 w-10 shrink-0 place-items-center rounded-[12px]",
+                            transactionIconTone[transaction.type]
+                          )}
+                        >
+                          <Icon size={18} strokeWidth={1.8} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-[#171717]">
+                            {transaction.title}
+                          </p>
+                          <p className="mt-0.5 truncate text-xs text-[#737373]">
+                            {transaction.subtitle}
+                            {transaction.note ? ` · ${transaction.note}` : ""}
+                          </p>
+                        </div>
+                        <p
+                          className={cn(
+                            "shrink-0 text-sm",
+                            transaction.type === "top_up" ? "text-blue-600" : "text-[#171717]"
+                          )}
+                        >
+                          {formatRupiah(transaction.amount)}
                         </p>
                       </div>
-                      <p
-                        className={cn(
-                          "shrink-0 text-sm",
-                          transaction.type === "top_up" ? "text-blue-600" : "text-[#171717]"
-                        )}
-                      >
-                        {formatRupiah(transaction.amount)}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="px-4 py-5 text-sm text-[#737373]">Belum ada transaksi.</p>

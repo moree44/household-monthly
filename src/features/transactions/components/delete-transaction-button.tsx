@@ -49,9 +49,9 @@ export function DeleteTransactionButton({ transactionId }: DeleteTransactionButt
   }
 
   return (
-    <form action={formAction} className="grid justify-items-end gap-2">
+    <form action={formAction} className="absolute right-3 top-14 z-10 grid justify-items-end gap-2">
       <input type="hidden" name="transactionId" value={transactionId} />
-      <div className="flex items-center gap-2 rounded-[12px] bg-red-50 p-1">
+      <div className="flex items-center gap-1 rounded-[12px] bg-red-50 p-1 shadow-lg shadow-black/10">
         <button
           type="button"
           className="h-8 rounded-[10px] px-2 text-xs font-bold text-[#737373] transition hover:bg-[#FAFAFA] hover:text-[#171717]"

@@ -130,7 +130,7 @@ export async function getHistoryData(
         gte: start,
         lt: end
       },
-      ...(showDeleted || typeFilter === "all" ? {} : { type: typeFilter })
+      ...(typeFilter === "all" ? {} : { type: typeFilter })
     },
     orderBy: [
       {

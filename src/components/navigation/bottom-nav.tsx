@@ -26,8 +26,8 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
 
   return (
     <>
-      <div className="h-24 lg:hidden" />
-      <nav className="fixed bottom-4 left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 text-[11px] font-semibold shadow-xl shadow-black/20 lg:hidden">
+      <div className="h-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:hidden" />
+      <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 text-[11px] font-semibold shadow-xl shadow-black/20 lg:hidden">
         <div className="grid h-full grid-cols-5 items-end">
           <Link href={dashboardHref} className={itemClass("home")} style={itemStyle("home")}>
             <Home size={18} strokeWidth={1.8} />

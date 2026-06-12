@@ -2,7 +2,7 @@
 
 ## Product Requirements Document
 
-**Version 2.0**
+**Version 2.2**
 
 ---
 
@@ -106,6 +106,8 @@ Dompet Istri
 - Soft delete transaction
 - Restore transaction
 - Basic responsive UI for mobile and desktop
+- PWA metadata for iOS Safari Add to Home Screen
+- iPhone safe-area handling for standalone Home Screen mode
 
 **Excluded from MVP:**
 
@@ -467,6 +469,7 @@ Filter lanjutan seperti kategori, wallet, dan user dapat ditambahkan setelah MVP
 - Expense, top up, transfer, dan adjustment dibedakan secara visual.
 - Active transaction dapat diedit atau soft delete.
 - Deleted transaction dapat direstore.
+- Filter tipe transaksi berlaku untuk Active dan Deleted history.
 
 ---
 
@@ -528,6 +531,7 @@ Dashboard harus memberi gambaran kondisi bulan berjalan dalam kurang dari 3 deti
 **Card 5 - Recent Transactions**
 
 - 5 transaksi terbaru
+- Icon per tipe transaksi
 
 ### Desktop
 
@@ -654,6 +658,20 @@ Primary add button membuka pilihan:
 - Top Up
 - Adjustment
 
+### PWA / iOS Safari
+
+Target penggunaan mobile adalah Safari iOS dan Add to Home Screen sebagai mini app.
+
+Requirements:
+
+- Web app manifest tersedia.
+- App icon dan Apple touch icon tersedia.
+- `display` manifest memakai `standalone`.
+- Theme color mengikuti active surface `#171717`.
+- Viewport memakai safe-area support.
+- Bottom navigation tidak menabrak iPhone home indicator.
+- Top content tidak tertutup iOS status bar dalam standalone mode.
+
 ---
 
 ## Technical Architecture
@@ -667,6 +685,7 @@ Primary add button membuka pilihan:
 | Styling | TailwindCSS |
 | Components | Custom app components |
 | Icons | Lucide React |
+| PWA | Next.js metadata routes, manifest, generated icons |
 
 ### Backend
 
@@ -810,6 +829,11 @@ prisma/
 - Error handling
 - UI consistency across dashboard, catat, history, goals, profile
 - Transaction flow audit
+- iOS Safari PWA setup
+- Add to Home Screen icon and safe-area polish
+- Dashboard recent transaction icons
+- History deleted type filter fix
+- History delete/restore confirmation mobile overflow fix
 - Prepare private GitHub repo
 - Prepare cloud database and Vercel deployment
 
@@ -818,6 +842,10 @@ prisma/
 - Category icons
 - Manual goal icon picker
 - Advanced history filters
+- Smoother route transitions for PWA:
+  - route loading skeletons
+  - stronger pressed states
+  - route/data prefetch where useful
 - Monthly closing flow to move leftover operational balance to Tabungan Rumah
 - Receipt upload
 - OCR parsing
@@ -849,6 +877,20 @@ Expected data scale is small:
 
 ---
 
+## Current Open Items
+
+- Current laptop changes need commit and push to GitHub.
+- Vercel project is not configured yet.
+- Cloud PostgreSQL is not configured yet.
+- Default seed passwords must be changed before serious use.
+- Full iPhone PWA manual transaction checklist is still pending.
+- Route transitions can be polished further after Vercel preview testing.
+- Production database strategy must be decided:
+  - local PostgreSQL per device, or
+  - shared cloud PostgreSQL for PC/laptop/Vercel.
+
+---
+
 ## Changelog
 
 | Version | Perubahan |
@@ -859,3 +901,4 @@ Expected data scale is small:
 | 1.3 | Revisi kategori final, tambah Category Management section |
 | 2.0 | Rename ke Household Monthly, hapus budget system, tambah username/password custom auth, soft delete, category management MVP, dan data model awal |
 | 2.1 | Update implementasi: goals manual, UI mobile-first charcoal/gray, flat categories, history weekly filter, restore transaction, dan deployment handoff notes |
+| 2.2 | Tambah PWA/iOS Safari Add to Home Screen, safe-area handling, icon app, fix History Deleted type filter, fix confirm delete/restore mobile overflow, dan icon Recent Transactions |
