@@ -101,6 +101,8 @@ Isi `.env`:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/household_monthly"
 DIRECT_URL="postgresql://postgres:postgres@localhost:5432/household_monthly"
 AUTH_SECRET="isi-dengan-secret-lokal"
+SEED_SUAMI_PASSWORD="password123"
+SEED_ISTRI_PASSWORD="password123"
 ```
 
 Start PostgreSQL di WSL:
@@ -133,7 +135,13 @@ Default seed users:
 - `suami` / `password123`
 - `istri` / `password123`
 
-Ganti password sebelum deploy atau penggunaan serius.
+Untuk environment baru, ubah `SEED_SUAMI_PASSWORD` dan `SEED_ISTRI_PASSWORD` sebelum `npm run db:seed` jika tidak ingin memakai `password123`.
+
+Untuk user yang sudah terlanjur dibuat, ubah password lewat menu:
+
+```text
+Profil -> Kelola Pengguna -> Password baru -> Save
+```
 
 ## Useful Commands
 
@@ -213,3 +221,9 @@ Target deploy:
 - Environment variables disimpan di Vercel, bukan di repo
 
 Untuk sinkron data antar PC/laptop/Vercel, gunakan database cloud yang sama.
+
+Detail deployment ada di:
+
+```text
+DEPLOYMENT.md
+```

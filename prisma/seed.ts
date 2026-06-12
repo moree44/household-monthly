@@ -29,7 +29,8 @@ const goals = [
 ] as const;
 
 async function main() {
-  const defaultPassword = await bcrypt.hash("password123", 12);
+  const suamiPassword = await bcrypt.hash(process.env.SEED_SUAMI_PASSWORD ?? "password123", 12);
+  const istriPassword = await bcrypt.hash(process.env.SEED_ISTRI_PASSWORD ?? "password123", 12);
 
   await prisma.user.upsert({
     where: { username: "suami" },
@@ -38,7 +39,7 @@ async function main() {
       username: "suami",
       displayName: "Suami",
       role: UserRole.admin,
-      passwordHash: defaultPassword
+      passwordHash: suamiPassword
     }
   });
 
@@ -49,7 +50,7 @@ async function main() {
       username: "istri",
       displayName: "Istri",
       role: UserRole.member,
-      passwordHash: defaultPassword
+      passwordHash: istriPassword
     }
   });
 

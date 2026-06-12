@@ -76,7 +76,14 @@ Jalankan dari folder project, bukan dari `/home/moree`.
 - `suami` / `password123`
 - `istri` / `password123`
 
-Ganti password sebelum pemakaian serius/deploy.
+Untuk environment baru, seed password bisa diganti via env sebelum `npm run db:seed`:
+
+```bash
+SEED_SUAMI_PASSWORD="new-password"
+SEED_ISTRI_PASSWORD="new-password"
+```
+
+Untuk user yang sudah ada, ubah password lewat Profil -> Kelola Pengguna.
 
 ## Laptop Setup Handoff - 2026-06-12
 
@@ -297,15 +304,19 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
    - `npx tsc --noEmit`
    - `npm run build`
 2. Manual transaction checklist on iPhone/PWA:
+   - Follow `TESTING_CHECKLIST.md`.
    - Expense create/edit/delete/restore
    - Transfer create/edit/delete/restore
    - Top Up create/edit/delete/restore
    - Dashboard and wallet balance after each action
-3. Change default seed passwords before serious use.
+3. Change default seed passwords before serious use:
+   - new environment: set `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD` before seed
+   - existing users: update via Profil -> Kelola Pengguna
 4. Decide database strategy:
    - local PostgreSQL per device, or
    - cloud PostgreSQL shared by PC/laptop/Vercel.
 5. Prepare cloud PostgreSQL and Vercel deployment.
+   - Follow `DEPLOYMENT.md`.
 6. Polish PWA smoothness if needed:
    - route loading skeletons
    - stronger bottom-nav pressed states
@@ -317,7 +328,7 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 
 - Vercel deployment is not configured yet.
 - Cloud PostgreSQL is not configured yet.
-- Default passwords are not changed yet.
+- Production/default passwords are not changed yet.
 - Full manual transaction checklist on iPhone PWA is not completed yet.
 - Route transitions are functional but can still be made smoother with loading skeletons/prefetch polish.
 
