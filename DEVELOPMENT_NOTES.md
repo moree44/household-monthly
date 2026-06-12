@@ -290,40 +290,31 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 
 ## Recommended Next Steps
 
-1. Commit current laptop changes:
-   - PWA manifest/icons/iOS safe area
-   - History deleted type filter fix
-   - History delete/restore confirm overflow fix
-   - Dashboard Recent Transactions icons
-   - Documentation updates
-2. Push to GitHub private repo.
-3. Pull on PC utama and run:
+1. After pulling laptop changes on PC utama, run:
    - `npm install` if dependency changes exist
    - `npm run prisma:migrate`
    - `npm run lint`
    - `npx tsc --noEmit`
    - `npm run build`
-4. Manual transaction checklist on iPhone/PWA:
+2. Manual transaction checklist on iPhone/PWA:
    - Expense create/edit/delete/restore
    - Transfer create/edit/delete/restore
    - Top Up create/edit/delete/restore
    - Dashboard and wallet balance after each action
-5. Change default seed passwords before serious use.
-6. Decide database strategy:
+3. Change default seed passwords before serious use.
+4. Decide database strategy:
    - local PostgreSQL per device, or
    - cloud PostgreSQL shared by PC/laptop/Vercel.
-7. Prepare cloud PostgreSQL and Vercel deployment.
-8. Polish PWA smoothness if needed:
+5. Prepare cloud PostgreSQL and Vercel deployment.
+6. Polish PWA smoothness if needed:
    - route loading skeletons
    - stronger bottom-nav pressed states
    - route/data prefetch where useful
-9. Polish Profile/settings detail if needed.
-10. Add category/wallet icons later.
+7. Polish Profile/settings detail if needed.
+8. Add category/wallet icons later.
 
 ## Not Done Yet
 
-- Current changes are not committed yet.
-- Current changes are not pushed to GitHub yet.
 - Vercel deployment is not configured yet.
 - Cloud PostgreSQL is not configured yet.
 - Default passwords are not changed yet.

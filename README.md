@@ -141,6 +141,7 @@ Ganti password sebelum deploy atau penggunaan serius.
 npm run dev
 npm run lint
 npx tsc --noEmit
+npm run build
 npm run prisma:migrate
 npm run db:seed
 npm run prisma:studio
@@ -148,6 +149,20 @@ npx prisma studio
 ```
 
 Catatan: jalankan `npx prisma studio` dari folder project `household-monthly`, bukan dari folder home.
+
+## PWA / iPhone Test
+
+Project sudah punya metadata PWA, generated app icons, dan safe-area handling untuk Safari iOS Add to Home Screen.
+
+Untuk test dari iPhone di jaringan luar/laptop, bisa pakai production mode + Cloudflare Tunnel:
+
+```bash
+npm run build
+npm run start -- --hostname 0.0.0.0
+cloudflared tunnel --url http://localhost:3000
+```
+
+Cloudflare Tunnel quick URL bersifat sementara dan publik selama proses tunnel berjalan.
 
 ## GitHub Notes
 

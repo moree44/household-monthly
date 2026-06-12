@@ -130,7 +130,7 @@ Dompet Istri
 - Manage users
 - Manage wallets
 - Manage source accounts
-- Manage categories and sub-categories
+- Manage categories
 - View all transactions
 - Add expense
 - Add top up
