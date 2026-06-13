@@ -174,5 +174,11 @@ model Transaction {
   @@index([subCategoryId])
   @@index([createdById])
   @@index([deletedAt])
+  @@index([deletedAt, transactionDate])
+  @@index([type, deletedAt, transactionDate])
+  @@index([walletId, deletedAt])
+  @@index([fromWalletId, deletedAt])
+  @@index([toWalletId, deletedAt])
+  @@index([categoryId, deletedAt, transactionDate])
   @@map("transactions")
 }

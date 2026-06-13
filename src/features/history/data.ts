@@ -140,42 +140,21 @@ export async function getHistoryData(
         createdAt: "desc"
       }
     ],
-    include: {
-      wallet: {
-        select: {
-          name: true
-        }
-      },
-      fromWallet: {
-        select: {
-          name: true
-        }
-      },
-      toWallet: {
-        select: {
-          name: true
-        }
-      },
-      sourceAccount: {
-        select: {
-          name: true
-        }
-      },
-      category: {
-        select: {
-          name: true
-        }
-      },
-      createdBy: {
-        select: {
-          displayName: true
-        }
-      },
-      deletedBy: {
-        select: {
-          displayName: true
-        }
-      }
+    select: {
+      id: true,
+      type: true,
+      transactionDate: true,
+      amount: true,
+      description: true,
+      deletedAt: true,
+      createdAt: true,
+      wallet: { select: { name: true } },
+      fromWallet: { select: { name: true } },
+      toWallet: { select: { name: true } },
+      sourceAccount: { select: { name: true } },
+      category: { select: { name: true } },
+      createdBy: { select: { displayName: true } },
+      deletedBy: { select: { displayName: true } }
     }
   });
 
