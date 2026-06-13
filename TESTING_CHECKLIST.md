@@ -2,6 +2,13 @@
 
 Use this after pulling changes, before serious use, and before Vercel deploy.
 
+Status:
+
+- Last full manual test: 2026-06-13
+- Tester: moree
+- Result: pass
+- Environment: PC WSL + Cloudflare Tunnel + iPhone/PWA
+
 ## Local Verification
 
 ```bash
@@ -12,109 +19,109 @@ npm run build
 
 ## Basic App
 
-- [ ] Login as `suami`.
-- [ ] Dashboard opens.
-- [ ] Month selector previous/next works.
-- [ ] Bottom navigation works:
-  - [ ] home
-  - [ ] history
-  - [ ] catat
-  - [ ] goals
-  - [ ] profil
+- [x] Login as `suami`.
+- [x] Dashboard opens.
+- [x] Month selector previous/next works.
+- [x] Bottom navigation works:
+  - [x] home
+  - [x] history
+  - [x] catat
+  - [x] goals
+  - [x] profil
 
 ## Expense Flow
 
-- [ ] Create expense from Catat.
-- [ ] Expense appears in Dashboard Recent Transactions.
-- [ ] Expense appears in History Active.
-- [ ] Operational expense increases.
-- [ ] Wallet balance decreases.
-- [ ] Edit expense amount/category/wallet/note/date.
-- [ ] Dashboard and History reflect edited expense.
-- [ ] Delete expense from History.
-- [ ] Expense disappears from Active.
-- [ ] Expense appears in Deleted.
-- [ ] Wallet balance and monthly summary exclude deleted expense.
-- [ ] Restore expense.
-- [ ] Expense returns to Active.
-- [ ] Wallet balance and monthly summary include restored expense.
+- [x] Create expense from Catat.
+- [x] Expense appears in Dashboard Recent Transactions.
+- [x] Expense appears in History Active.
+- [x] Operational expense increases.
+- [x] Wallet balance decreases.
+- [x] Edit expense amount/category/wallet/note/date.
+- [x] Dashboard and History reflect edited expense.
+- [x] Delete expense from History.
+- [x] Expense disappears from Active.
+- [x] Expense appears in Deleted.
+- [x] Wallet balance and monthly summary exclude deleted expense.
+- [x] Restore expense.
+- [x] Expense returns to Active.
+- [x] Wallet balance and monthly summary include restored expense.
 
 ## Transfer Flow
 
-- [ ] Create transfer from one wallet to another.
-- [ ] Transfer appears in Dashboard Recent Transactions.
-- [ ] Transfer appears in History Active.
-- [ ] Source wallet decreases.
-- [ ] Destination wallet increases.
-- [ ] Operational expense does not increase.
-- [ ] Edit transfer amount/from/to/note/date.
-- [ ] Dashboard and History reflect edited transfer.
-- [ ] Delete transfer.
-- [ ] Wallet balances exclude deleted transfer.
-- [ ] Restore transfer.
-- [ ] Wallet balances include restored transfer.
+- [x] Create transfer from one wallet to another.
+- [x] Transfer appears in Dashboard Recent Transactions.
+- [x] Transfer appears in History Active.
+- [x] Source wallet decreases.
+- [x] Destination wallet increases.
+- [x] Operational expense does not increase.
+- [x] Edit transfer amount/from/to/note/date.
+- [x] Dashboard and History reflect edited transfer.
+- [x] Delete transfer.
+- [x] Wallet balances exclude deleted transfer.
+- [x] Restore transfer.
+- [x] Wallet balances include restored transfer.
 
 ## Top Up Flow
 
-- [ ] Create top up from source account to wallet.
-- [ ] Top up appears in Dashboard Recent Transactions.
-- [ ] Top up appears in History Active.
-- [ ] Destination wallet increases.
-- [ ] Operational expense does not increase.
-- [ ] Edit top up amount/source/wallet/note/date.
-- [ ] Dashboard and History reflect edited top up.
-- [ ] Delete top up.
-- [ ] Wallet balance excludes deleted top up.
-- [ ] Restore top up.
-- [ ] Wallet balance includes restored top up.
+- [x] Create top up from source account to wallet.
+- [x] Top up appears in Dashboard Recent Transactions.
+- [x] Top up appears in History Active.
+- [x] Destination wallet increases.
+- [x] Operational expense does not increase.
+- [x] Edit top up amount/source/wallet/note/date.
+- [x] Dashboard and History reflect edited top up.
+- [x] Delete top up.
+- [x] Wallet balance excludes deleted top up.
+- [x] Restore top up.
+- [x] Wallet balance includes restored top up.
 
 ## History
 
-- [ ] Filter Active works.
-- [ ] Filter Deleted works.
-- [ ] Type filter works for Active.
-- [ ] Type filter works for Deleted.
-- [ ] Weekly filter works:
-  - [ ] W1 = 1-7
-  - [ ] W2 = 8-14
-  - [ ] W3 = 15-21
-  - [ ] W4 = 22-end of month
-- [ ] Notes are visible but compact.
-- [ ] Delete/restore confirm does not overflow on mobile.
+- [x] Filter Active works.
+- [x] Filter Deleted works.
+- [x] Type filter works for Active.
+- [x] Type filter works for Deleted.
+- [x] Weekly filter works:
+  - [x] W1 = 1-7
+  - [x] W2 = 8-14
+  - [x] W3 = 15-21
+  - [x] W4 = 22-end of month
+- [x] Notes are visible but compact.
+- [x] Delete/restore confirm does not overflow on mobile.
 
 ## Goals
 
-- [ ] Create goal.
-- [ ] Edit current amount.
-- [ ] Edit target amount.
-- [ ] Progress changes correctly.
-- [ ] Deactivate goal.
-- [ ] Reactivate goal.
-- [ ] Auto icon matches known names:
-  - [ ] Dana Darurat
-  - [ ] Tabungan Rumah
-  - [ ] Liburan
+- [x] Create goal.
+- [x] Edit current amount.
+- [x] Edit target amount.
+- [x] Progress changes correctly.
+- [x] Deactivate goal.
+- [x] Reactivate goal.
+- [x] Auto icon matches known names:
+  - [x] Dana Darurat
+  - [x] Tabungan Rumah
+  - [x] Liburan
 
 ## Profile / Settings
 
-- [ ] Kelola Pengguna opens.
-- [ ] User display name can be edited.
-- [ ] User password can be changed.
-- [ ] User can be deactivated/reactivated where allowed.
-- [ ] Kelola Wallet opens.
-- [ ] Wallet can be added/edited/deactivated.
-- [ ] Kelola Kategori opens.
-- [ ] Category can be added/edited/deactivated.
-- [ ] Security page opens.
-- [ ] Appearance page opens.
+- [x] Kelola Pengguna opens.
+- [x] User display name can be edited.
+- [x] User password can be changed.
+- [x] User can be deactivated/reactivated where allowed.
+- [x] Kelola Wallet opens.
+- [x] Wallet can be added/edited/deactivated.
+- [x] Kelola Kategori opens.
+- [x] Category can be added/edited/deactivated.
+- [x] Security page opens.
+- [x] Appearance page opens.
 
 ## iPhone / PWA
 
-- [ ] Open app in Safari.
-- [ ] Add to Home Screen.
-- [ ] App icon appears correctly.
-- [ ] App opens in standalone mode.
-- [ ] Top safe-area has no overlap.
-- [ ] Bottom nav has no overlap with home indicator.
-- [ ] Catat page is fast enough for daily input.
-- [ ] Route transitions feel acceptable.
+- [x] Open app in Safari.
+- [x] Add to Home Screen.
+- [x] App icon appears correctly.
+- [x] App opens in standalone mode.
+- [x] Top safe-area has no overlap.
+- [x] Bottom nav has no overlap with home indicator.
+- [x] Catat page is fast enough for daily input.
+- [x] Route transitions feel acceptable.

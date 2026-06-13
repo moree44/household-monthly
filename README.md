@@ -217,10 +217,10 @@ Target deploy:
 
 - GitHub private repo
 - Vercel hosting
-- PostgreSQL cloud seperti Neon atau Supabase
+- Neon PostgreSQL cloud
 - Environment variables disimpan di Vercel, bukan di repo
 
-Untuk sinkron data antar PC/laptop/Vercel, gunakan database cloud yang sama.
+Neon database sudah dibuat dan migration/seed awal sudah selesai. Untuk sinkron data antar PC/laptop/Vercel, gunakan database cloud yang sama.
 
 Detail deployment ada di:
 

@@ -1,19 +1,28 @@
 # Deployment Checklist
 
-Target: GitHub private repo -> Vercel -> PostgreSQL cloud.
+Target: GitHub private repo -> Vercel -> Neon PostgreSQL.
 
-## 1. Choose Database Provider
+## 1. Database Provider
 
-Recommended options:
+Selected provider:
 
 - Neon
-- Supabase
+- Region: AWS Asia Pacific 1, Singapore
+- Database: `neondb`
 
-Use one shared cloud database if the app should have the same data across PC, laptop, phone, and Vercel.
+Use one shared cloud database so PC, laptop, phone, and Vercel read/write the same production data.
 
-## 2. Create Cloud PostgreSQL Database
+## 2. Environment Variables
 
-Create one production database, then copy the connection string.
+Local development can keep using `.env`.
+
+For Neon testing from local machine, keep a private local file such as:
+
+```text
+.env.local-neon
+```
+
+Do not commit this file.
 
 Expected env values:
 
@@ -21,15 +30,16 @@ Expected env values:
 DATABASE_URL="postgresql://..."
 DIRECT_URL="postgresql://..."
 AUTH_SECRET="long-random-production-secret"
-SEED_SUAMI_PASSWORD="change-this"
-SEED_ISTRI_PASSWORD="change-this"
+SEED_SUAMI_PASSWORD="production-seed-password"
+SEED_ISTRI_PASSWORD="production-seed-password"
 ```
 
 Notes:
 
-- Some providers give pooled and direct URLs.
-- Use pooled URL for `DATABASE_URL` if recommended by provider.
-- Use direct URL for `DIRECT_URL` / migrations.
+- Use Neon pooled URL for `DATABASE_URL`.
+- Use Neon direct URL for `DIRECT_URL` / migrations.
+- `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD` are only used when running `npm run db:seed`.
+- Store production env values in Vercel Environment Variables, not in GitHub.
 
 ## 3. Generate Production Auth Secret
 
@@ -41,26 +51,35 @@ openssl rand -base64 32
 
 Put the output into `AUTH_SECRET`.
 
-## 4. Run Migration Against Cloud DB
+## 4. Cloud Database Status
 
-From local machine after setting `.env` to cloud DB:
+Current Neon setup has been completed:
+
+- Migrations applied with `npx prisma migrate deploy`.
+- Seed completed with custom seed passwords.
+- Initial cloud data verified:
+  - 2 users
+  - 4 wallets
+  - 4 source accounts
+  - 10 categories
+  - 2 goals
+
+For future migrations against Neon, use:
 
 ```bash
-npm run prisma:migrate
+set -a
+source .env.local-neon
+set +a
+npx prisma migrate deploy
+```
+
+Only run seed again if the target database is empty or intentionally being reset:
+
+```bash
+set -a
+source .env.local-neon
+set +a
 npm run db:seed
-```
-
-Before seed, change:
-
-```env
-SEED_SUAMI_PASSWORD="..."
-SEED_ISTRI_PASSWORD="..."
-```
-
-If users already exist, update password from:
-
-```text
-Profil -> Kelola Pengguna
 ```
 
 ## 5. Vercel Setup
@@ -73,15 +92,17 @@ In Vercel:
    - `DATABASE_URL`
    - `DIRECT_URL`
    - `AUTH_SECRET`
-   - `SEED_SUAMI_PASSWORD` optional
-   - `SEED_ISTRI_PASSWORD` optional
+   - `SEED_SUAMI_PASSWORD` optional after seed
+   - `SEED_ISTRI_PASSWORD` optional after seed
 4. Deploy.
+
+Vercel does not need to run `npm run db:seed` during deploy because the Neon database has already been seeded.
 
 ## 6. Post Deploy Smoke Test
 
 Open production URL and test:
 
-- Login `suami`
+- Login `suami`.
 - Dashboard loads
 - Create Expense
 - Create Transfer
@@ -92,9 +113,39 @@ Open production URL and test:
 - Check History active/deleted
 - Check mobile Add to Home Screen
 
-## 7. Important Safety
+If users already exist and a password needs to be changed, update from:
+
+```text
+Profil -> Kelola Pengguna
+```
+
+## 7. Future Maintenance
+
+For a normal code update:
+
+```bash
+git pull
+npm install
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+If there is a new Prisma migration:
+
+```bash
+set -a
+source .env.local-neon
+set +a
+npx prisma migrate deploy
+```
+
+Then push to GitHub and let Vercel redeploy.
+
+## 8. Important Safety
 
 - Never commit `.env`.
+- Never commit `.env.local-neon`.
 - Do not use `password123` in production.
 - Cloudflare Tunnel quick URLs are public while the tunnel runs.
 - Use a private GitHub repo.

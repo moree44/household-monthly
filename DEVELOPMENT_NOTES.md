@@ -1,6 +1,6 @@
 # Development Notes
 
-Last updated: 2026-06-12, Asia/Jakarta
+Last updated: 2026-06-13, Asia/Jakarta
 
 ## Project Summary
 
@@ -281,14 +281,14 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 - Use `Save` instead of `Simpan` for primary transaction buttons.
 - Keep transaction input fast, especially on phone.
 - Category icons can be done later.
-- Deployment target is likely GitHub private + Vercel + cloud PostgreSQL.
+- Deployment target is GitHub private + Vercel + Neon PostgreSQL.
 - User prefers testing on iPhone Safari / Add to Home Screen before production deploy.
 
 ## Known Gotchas
 
 - `.env` must not be pushed to GitHub, even if repo is private.
 - PostgreSQL local database is not synced between PC/laptop.
-- To share the same data across devices, use cloud PostgreSQL such as Neon or Supabase.
+- Shared cloud database is now prepared on Neon for PC/laptop/Vercel production data.
 - Codex chat session does not move automatically to laptop. Read this file, README, PRD, and workflow doc in the new session.
 - If port 3000 is busy in WSL, check running Next process or WSL relay.
 - Browser extension can cause React hydration warning by injecting HTML attributes. Test in incognito if needed.
@@ -303,34 +303,52 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
    - `npm run lint`
    - `npx tsc --noEmit`
    - `npm run build`
-2. Manual transaction checklist on iPhone/PWA:
-   - Follow `TESTING_CHECKLIST.md`.
-   - Expense create/edit/delete/restore
-   - Transfer create/edit/delete/restore
-   - Top Up create/edit/delete/restore
-   - Dashboard and wallet balance after each action
-3. Change default seed passwords before serious use:
+2. Change default seed passwords before serious use:
    - new environment: set `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD` before seed
    - existing users: update via Profil -> Kelola Pengguna
-4. Decide database strategy:
-   - local PostgreSQL per device, or
-   - cloud PostgreSQL shared by PC/laptop/Vercel.
-5. Prepare cloud PostgreSQL and Vercel deployment.
+3. Deploy to Vercel using the Neon env values from `.env.local-neon`.
    - Follow `DEPLOYMENT.md`.
-6. Polish PWA smoothness if needed:
+4. Run production smoke test after Vercel deploy:
+   - login
+   - create Expense
+   - create Transfer
+   - create Top Up
+   - delete/restore
+   - test iPhone Add to Home Screen from production URL
+5. Polish PWA smoothness if needed:
    - route loading skeletons
    - stronger bottom-nav pressed states
    - route/data prefetch where useful
-7. Polish Profile/settings detail if needed.
-8. Add category/wallet icons later.
+6. Polish Profile/settings detail if needed.
+7. Add category/wallet icons later.
+
+## Cloud Database Status
+
+- 2026-06-13: Neon PostgreSQL project created.
+- Provider: Neon.
+- Region: AWS Asia Pacific 1, Singapore.
+- Database: `neondb`.
+- Migrations applied with `npx prisma migrate deploy`.
+- Seed completed with custom `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD`.
+- Initial cloud data verified:
+  - 2 users
+  - 4 wallets
+  - 4 source accounts
+  - 10 categories
+  - 2 goals
+  - 0 transactions
+
+## Manual Test Status
+
+- 2026-06-13: Full `TESTING_CHECKLIST.md` passed on PC WSL + Cloudflare Tunnel + iPhone/PWA.
+- Tested flows include Expense, Transfer, Top Up, edit, delete, restore, History filters, Goals, Profile/settings, and iPhone Add to Home Screen behavior.
 
 ## Not Done Yet
 
 - Vercel deployment is not configured yet.
-- Cloud PostgreSQL is not configured yet.
-- Production/default passwords are not changed yet.
-- Full manual transaction checklist on iPhone PWA is not completed yet.
-- Route transitions are functional but can still be made smoother with loading skeletons/prefetch polish.
+- Production smoke test after Vercel deployment is not completed yet.
+- Confirm production user passwords are stored safely and not using old default `password123`.
+- Route transitions are functional but can still be made smoother with extra prefetch polish if needed.
 
 ## GitHub Handoff Plan
 

@@ -2,7 +2,7 @@
 
 ## Product Requirements Document
 
-**Version 2.2**
+**Version 2.3**
 
 ---
 
@@ -835,7 +835,8 @@ prisma/
 - History deleted type filter fix
 - History delete/restore confirmation mobile overflow fix
 - Prepare private GitHub repo
-- Prepare cloud database and Vercel deployment
+- Prepare Neon cloud database
+- Prepare Vercel deployment
 
 ### Future Phase
 
@@ -879,15 +880,11 @@ Expected data scale is small:
 
 ## Current Open Items
 
-- Current laptop changes need commit and push to GitHub.
 - Vercel project is not configured yet.
-- Cloud PostgreSQL is not configured yet.
-- Default seed passwords must be changed before serious use.
-- Full iPhone PWA manual transaction checklist is still pending.
+- Production smoke test after Vercel deployment is not completed yet.
+- Confirm production user passwords are stored safely and not using old default `password123`.
 - Route transitions can be polished further after Vercel preview testing.
-- Production database strategy must be decided:
-  - local PostgreSQL per device, or
-  - shared cloud PostgreSQL for PC/laptop/Vercel.
+- Neon PostgreSQL has been configured as shared cloud database for PC/laptop/Vercel.
 
 ---
 
@@ -902,3 +899,4 @@ Expected data scale is small:
 | 2.0 | Rename ke Household Monthly, hapus budget system, tambah username/password custom auth, soft delete, category management MVP, dan data model awal |
 | 2.1 | Update implementasi: goals manual, UI mobile-first charcoal/gray, flat categories, history weekly filter, restore transaction, dan deployment handoff notes |
 | 2.2 | Tambah PWA/iOS Safari Add to Home Screen, safe-area handling, icon app, fix History Deleted type filter, fix confirm delete/restore mobile overflow, dan icon Recent Transactions |
+| 2.3 | Update status manual testing pass, Neon PostgreSQL configured, deployment docs, dan env example terbaru |
