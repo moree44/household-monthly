@@ -9,6 +9,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: "swap"
 });
 
+export const preferredRegion = "sin1";
+
 export const metadata: Metadata = {
   applicationName: "Household Monthly",
   title: "Household Monthly",
