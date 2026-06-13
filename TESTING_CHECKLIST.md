@@ -9,6 +9,16 @@ Status:
 - Result: pass
 - Environment: PC WSL + Cloudflare Tunnel + iPhone/PWA
 
+Latest production audit note:
+
+- 2026-06-13: Chrome Lighthouse dashboard snapshot on production:
+  - Performance: 87
+  - Accessibility: 95
+  - Best Practices: 77
+  - FCP: 1.6s
+  - LCP: 2.1s
+- Next Lighthouse follow-up: inspect Best Practices detail warnings.
+
 ## Local Verification
 
 ```bash
@@ -88,6 +98,14 @@ npm run build
   - [x] W4 = 22-end of month
 - [x] Notes are visible but compact.
 - [x] Delete/restore confirm does not overflow on mobile.
+
+Production retest after client-side History filter update:
+
+- [ ] W1/W2/W3/W4 switching feels instant.
+- [ ] Type filter switching feels instant.
+- [ ] Active/Deleted switching feels instant.
+- [ ] Delete refreshes the current History view.
+- [ ] Restore refreshes the current History view.
 
 ## Goals
 

@@ -79,6 +79,13 @@ Latest applied performance migration:
 
 This adds indexes for Dashboard, History, wallet balance, and category/month queries.
 
+Latest app-side performance changes:
+
+- History filter chips run client-side inside the selected month.
+- Transaction create/edit actions use fewer database round trips.
+- Settings count queries use grouped counts instead of relation `_count` includes.
+- Delete/restore refreshes the current route after successful action.
+
 Only run seed again if the target database is empty or intentionally being reset:
 
 ```bash
@@ -117,7 +124,15 @@ Open production URL and test:
 - Delete transaction
 - Restore transaction
 - Check History active/deleted
+- Check History W1/W2/W3/W4 filters
+- Check History Expense/Top Up/Transfer filters
 - Check mobile Add to Home Screen
+
+Optional production audit:
+
+- Run Lighthouse in Incognito with extensions disabled.
+- Run twice and compare the second result to avoid cold-start noise.
+- Check Performance, Accessibility, Best Practices, FCP, and LCP.
 
 If users already exist and a password needs to be changed, update from:
 

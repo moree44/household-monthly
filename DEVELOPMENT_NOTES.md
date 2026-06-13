@@ -343,20 +343,29 @@ Completed:
   - `category_id + deleted_at + transaction_date`
 - Migration applied to Neon:
   - `20260613000000_add_transaction_query_indexes`
+- Follow-up app performance changes:
+  - History month data is fetched once per month.
+  - History status/type/week filters now run client-side, so W1/W2/W3/W4 and type chips do not round-trip to Vercel/Neon.
+  - History URL is kept in sync with selected filters using `window.history.replaceState`.
+  - Delete/restore buttons refresh the current route after a successful action so client-side History remains synced.
+  - Transaction create/edit actions were simplified to reduce extra validation lookups before writes.
+  - Settings user/wallet/category counts were moved from relation `_count` includes to grouped count queries.
 
 Verification:
 
 ```bash
 npm run lint
 npx tsc --noEmit
+npm run build
 ```
 
-Both passed.
+All passed.
 
 Production notes:
 
 - After save, there can still be a short delay because the app writes to Neon, revalidates views, and redirects.
 - The delay should be more stable now as data grows because dashboard/history queries are lighter.
+- History filter chips should feel instant after the latest client-side filtering update.
 - If production feels slow after being idle, likely cause is serverless cold start from Vercel/Neon.
 - For future Prisma migrations against Neon, use:
 
@@ -366,6 +375,23 @@ source .env.local-neon
 set +a
 npm run prisma:migrate:deploy
 ```
+
+## 2026-06-13 Lighthouse Snapshot
+
+Production URL tested from Chrome Lighthouse on dashboard:
+
+- Performance: 87
+- Accessibility: 95
+- Best Practices: 77
+- First Contentful Paint: 1.6s
+- Largest Contentful Paint: 2.1s
+
+Interpretation:
+
+- Initial dashboard load is acceptable for a private dynamic app.
+- Lighthouse measures page load, not the in-app History filter delay or post-save delay.
+- Best Practices should be inspected next from Lighthouse details.
+- For cleaner audit numbers, run Lighthouse in Incognito with extensions disabled and repeat after the first cold-start run.
 
 ## Recommended Next Steps
 
@@ -389,12 +415,14 @@ npm run prisma:migrate:deploy
    - create Transfer
    - create Top Up
    - delete/restore
+   - test History filters W1/W2/W3/W4 and type chips
    - test iPhone Add to Home Screen from production URL
-5. Polish remaining PWA smoothness if needed:
-   - stronger pressed states
+5. Inspect Lighthouse Best Practices details and fix actionable warnings.
+6. Polish remaining PWA smoothness if needed:
    - smaller perceived delay after save
-6. Polish Profile/settings detail if needed.
-7. Add category/wallet icons later.
+   - smoother cold-start messaging if needed
+7. Polish Profile/settings detail if needed.
+8. Add category/wallet icons later.
 
 ## Cloud Database Status
 
@@ -423,6 +451,7 @@ npm run prisma:migrate:deploy
 - Rotate Neon password and `AUTH_SECRET` because setup secrets were pasted/shared during development.
 - Confirm production user passwords are strong enough for daily use.
 - Production smoke test after every performance/deploy change.
+- Lighthouse Best Practices detail review.
 - Extra PWA smoothness polish if production still feels delayed after idle.
 
 ## GitHub Handoff Plan

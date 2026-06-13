@@ -32,6 +32,7 @@ Fitur utama yang sudah berjalan:
 - Responsive mobile-first UI
 - Vercel + Neon PostgreSQL production deployment
 - Route loading skeletons and optimized dashboard/history queries
+- Client-side History filters for status, type, and week within the selected month
 
 ## Local Setup
 
@@ -238,9 +239,20 @@ Production performance notes:
 
 - Vercel functions diarahkan ke Singapore.
 - Dashboard memakai grouped aggregate queries untuk saldo wallet.
-- History query hanya mengambil field yang dipakai UI.
+- History query mengambil data bulan sekali, lalu status/type/week filter diproses di browser.
 - Transaction indexes sudah ditambahkan untuk data jangka panjang.
+- Transaction save actions sudah dikurangi extra database round trip.
 - Delay singkat setelah idle masih mungkin terjadi karena serverless cold start.
+
+Latest Lighthouse snapshot:
+
+- Performance: 87
+- Accessibility: 95
+- Best Practices: 77
+- FCP: 1.6s
+- LCP: 2.1s
+
+Next audit target: inspect Lighthouse Best Practices details and fix actionable warnings.
 
 Detail deployment ada di:
 
