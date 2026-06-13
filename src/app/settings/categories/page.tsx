@@ -8,26 +8,42 @@ import { prisma } from "@/lib/db/prisma";
 export default async function CategoriesSettingsPage() {
   await requireUser();
 
-  const categories = await prisma.category.findMany({
-    orderBy: [
-      {
-        isActive: "desc"
-      },
-      {
-        sortOrder: "asc"
-      },
-      {
-        name: "asc"
-      }
-    ],
-    include: {
-      _count: {
-        select: {
-          transactions: true
+  const [categories, transactionCounts] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: [
+        {
+          isActive: "desc"
+        },
+        {
+          sortOrder: "asc"
+        },
+        {
+          name: "asc"
         }
+      ],
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        isDefault: true
       }
-    }
-  });
+    }),
+    prisma.transaction.groupBy({
+      by: ["categoryId"],
+      where: {
+        categoryId: {
+          not: null
+        }
+      },
+      _count: {
+        _all: true
+      }
+    })
+  ]);
+
+  const transactionCountByCategoryId = new Map(
+    transactionCounts.flatMap((count) => (count.categoryId ? [[count.categoryId, count._count._all]] : []))
+  );
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
@@ -53,7 +69,7 @@ export default async function CategoriesSettingsPage() {
             name: category.name,
             isActive: category.isActive,
             isDefault: category.isDefault,
-            transactionCount: category._count.transactions
+            transactionCount: transactionCountByCategoryId.get(category.id) ?? 0
           }))}
         />
 

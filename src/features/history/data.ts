@@ -5,6 +5,33 @@ import type { MonthContext } from "@/lib/date/month";
 export type HistoryTypeFilter = "all" | TransactionType;
 export type HistoryStatusFilter = "active" | "deleted";
 export type HistoryWeekFilter = "all" | "1" | "2" | "3" | "4";
+export type HistoryWeek = {
+  value: Exclude<HistoryWeekFilter, "all">;
+  label: string;
+  rangeLabel: string;
+  startDay: number;
+  endDay: number;
+};
+export type HistoryItem = {
+  id: string;
+  type: Exclude<HistoryTypeFilter, "all">;
+  typeLabel: string;
+  dateGroup: string;
+  dayOfMonth: number;
+  time: string;
+  title: string;
+  subtitle: string;
+  amount: number;
+  note: string | null;
+  actor: string;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  deletedLabel: string | null;
+};
+export type HistoryGroup = {
+  date: string;
+  items: HistoryItem[];
+};
 
 function decimalToNumber(value: { toString(): string } | null | undefined) {
   if (!value) {
@@ -76,13 +103,7 @@ export function parseHistoryWeekFilter(value: string | string[] | undefined): Hi
 }
 
 function getMonthWeekRanges(month: MonthContext) {
-  const ranges: {
-    value: Exclude<HistoryWeekFilter, "all">;
-    label: string;
-    rangeLabel: string;
-    start: Date;
-    end: Date;
-  }[] = [];
+  const ranges: HistoryWeek[] = [];
 
   const monthLabel = new Intl.DateTimeFormat("id-ID", {
     month: "short"
@@ -102,12 +123,30 @@ function getMonthWeekRanges(month: MonthContext) {
       value: String(index + 1) as Exclude<HistoryWeekFilter, "all">,
       label: `W${index + 1}`,
       rangeLabel: `${startDay}-${endDay} ${monthLabel}`,
-      start: new Date(month.start.getFullYear(), month.start.getMonth(), startDay),
-      end: new Date(month.start.getFullYear(), month.start.getMonth(), endDay + 1)
+      startDay,
+      endDay
     });
   }
 
   return ranges;
+}
+
+export function groupHistoryItems(items: HistoryItem[]) {
+  return items.reduce<HistoryGroup[]>((result, item) => {
+    const existingGroup = result.find((group) => group.date === item.dateGroup);
+
+    if (existingGroup) {
+      existingGroup.items.push(item);
+      return result;
+    }
+
+    result.push({
+      date: item.dateGroup,
+      items: [item]
+    });
+
+    return result;
+  }, []);
 }
 
 export async function getHistoryData(
@@ -119,18 +158,13 @@ export async function getHistoryData(
   const weeks = getMonthWeekRanges(month);
   const selectedWeek = weekFilter === "all" ? null : weeks.find((week) => week.value === weekFilter) ?? null;
   const resolvedWeekFilter: HistoryWeekFilter = selectedWeek ? selectedWeek.value : "all";
-  const start = selectedWeek?.start ?? month.start;
-  const end = selectedWeek?.end ?? month.end;
-  const showDeleted = statusFilter === "deleted";
 
   const transactions = await prisma.transaction.findMany({
     where: {
-      deletedAt: showDeleted ? { not: null } : null,
       transactionDate: {
-        gte: start,
-        lt: end
-      },
-      ...(typeFilter === "all" ? {} : { type: typeFilter })
+        gte: month.start,
+        lt: month.end
+      }
     },
     orderBy: [
       {
@@ -158,7 +192,7 @@ export async function getHistoryData(
     }
   });
 
-  const items = transactions.map((transaction) => {
+  const items = transactions.map<HistoryItem>((transaction) => {
     const amount = decimalToNumber(transaction.amount);
     const transferSubtitle = [transaction.fromWallet?.name, transaction.toWallet?.name]
       .filter(Boolean)
@@ -169,6 +203,7 @@ export async function getHistoryData(
       type: transaction.type,
       typeLabel: getTransactionTypeLabel(transaction.type),
       dateGroup: formatDateGroup(transaction.transactionDate),
+      dayOfMonth: transaction.transactionDate.getDate(),
       time: formatTime(transaction.createdAt),
       title:
         transaction.category?.name ??
@@ -184,7 +219,7 @@ export async function getHistoryData(
       amount: transaction.type === "expense" ? -amount : amount,
       note: transaction.description,
       actor: transaction.createdBy.displayName,
-      deletedAt: transaction.deletedAt,
+      deletedAt: transaction.deletedAt?.toISOString() ?? null,
       deletedBy: transaction.deletedBy?.displayName ?? null,
       deletedLabel: transaction.deletedAt
         ? `${formatDateGroup(transaction.deletedAt)} · ${formatTime(transaction.deletedAt)}`
@@ -192,26 +227,15 @@ export async function getHistoryData(
     };
   });
 
-  const groups = items.reduce<
-    {
-      date: string;
-      items: typeof items;
-    }[]
-  >((result, item) => {
-    const existingGroup = result.find((group) => group.date === item.dateGroup);
+  const filteredItems = items.filter((item) => {
+    const matchesStatus = statusFilter === "deleted" ? Boolean(item.deletedAt) : !item.deletedAt;
+    const matchesType = typeFilter === "all" || item.type === typeFilter;
+    const matchesWeek =
+      resolvedWeekFilter === "all" ||
+      (selectedWeek ? item.dayOfMonth >= selectedWeek.startDay && item.dayOfMonth <= selectedWeek.endDay : true);
 
-    if (existingGroup) {
-      existingGroup.items.push(item);
-      return result;
-    }
-
-    result.push({
-      date: item.dateGroup,
-      items: [item]
-    });
-
-    return result;
-  }, []);
+    return matchesStatus && matchesType && matchesWeek;
+  });
 
   return {
     monthKey: month.key,
@@ -222,6 +246,7 @@ export async function getHistoryData(
     statusFilter,
     weekFilter: resolvedWeekFilter,
     weeks,
-    groups
+    items,
+    groups: groupHistoryItems(filteredItems)
   };
 }

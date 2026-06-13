@@ -8,23 +8,40 @@ import { prisma } from "@/lib/db/prisma";
 export default async function WalletSettingsPage() {
   await requireUser();
 
-  const wallets = await prisma.wallet.findMany({
-    orderBy: [
-      {
-        sortOrder: "asc"
-      },
-      {
-        name: "asc"
-      }
-    ],
-    include: {
-      _count: {
-        select: {
-          transactions: true
+  const [wallets, transactionCounts] = await Promise.all([
+    prisma.wallet.findMany({
+      orderBy: [
+        {
+          sortOrder: "asc"
+        },
+        {
+          name: "asc"
         }
+      ],
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        initialBalance: true,
+        isActive: true
       }
-    }
-  });
+    }),
+    prisma.transaction.groupBy({
+      by: ["walletId"],
+      where: {
+        walletId: {
+          not: null
+        }
+      },
+      _count: {
+        _all: true
+      }
+    })
+  ]);
+
+  const transactionCountByWalletId = new Map(
+    transactionCounts.flatMap((count) => (count.walletId ? [[count.walletId, count._count._all]] : []))
+  );
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
@@ -51,7 +68,7 @@ export default async function WalletSettingsPage() {
             type: wallet.type,
             initialBalance: Number(wallet.initialBalance),
             isActive: wallet.isActive,
-            transactionCount: wallet._count.transactions
+            transactionCount: transactionCountByWalletId.get(wallet.id) ?? 0
           }))}
         />
 

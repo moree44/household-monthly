@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import {
   restoreTransactionAction,
@@ -13,7 +14,8 @@ type RestoreTransactionButtonProps = {
 };
 
 const initialState: RestoreTransactionState = {
-  error: null
+  error: null,
+  success: false
 };
 
 function SubmitButton() {
@@ -32,8 +34,17 @@ function SubmitButton() {
 }
 
 export function RestoreTransactionButton({ transactionId }: RestoreTransactionButtonProps) {
+  const router = useRouter();
   const [state, formAction] = useActionState(restoreTransactionAction, initialState);
   const [isConfirming, setIsConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!state.success) {
+      return;
+    }
+
+    router.refresh();
+  }, [router, state.success]);
 
   if (!isConfirming) {
     return (

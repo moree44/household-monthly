@@ -20,10 +20,12 @@ export type TransferFormState = {
 
 export type DeleteTransactionState = {
   error: string | null;
+  success: boolean;
 };
 
 export type RestoreTransactionState = {
   error: string | null;
+  success: boolean;
 };
 
 const expenseSchema = z.object({
@@ -112,46 +114,13 @@ export async function createExpenseAction(
     };
   }
 
-  const [wallet, category] = await Promise.all([
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.walletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.category.findFirst({
-      where: {
-        id: parsed.data.categoryId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
-
-  if (!wallet) {
-    return {
-      error: "Wallet tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!category) {
-    return {
-      error: "Kategori tidak ditemukan atau tidak aktif."
-    };
-  }
-
   await prisma.transaction.create({
     data: {
       type: "expense",
       transactionDate,
       amount,
-      walletId: wallet.id,
-      categoryId: category.id,
+      walletId: parsed.data.walletId,
+      categoryId: parsed.data.categoryId,
       subCategoryId: null,
       description: parsed.data.description || null,
       createdById: currentUser.id
@@ -205,52 +174,20 @@ export async function updateExpenseAction(
     };
   }
 
-  const [transaction, wallet, category] = await Promise.all([
-    prisma.transaction.findFirst({
-      where: {
-        id: transactionId,
-        type: "expense",
-        deletedAt: null
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.walletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.category.findFirst({
-      where: {
-        id: parsed.data.categoryId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      id: transactionId,
+      type: "expense",
+      deletedAt: null
+    },
+    select: {
+      id: true
+    }
+  });
 
   if (!transaction) {
     return {
       error: "Expense tidak ditemukan atau sudah dihapus."
-    };
-  }
-
-  if (!wallet) {
-    return {
-      error: "Wallet tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!category) {
-    return {
-      error: "Kategori tidak ditemukan atau tidak aktif."
     };
   }
 
@@ -261,8 +198,8 @@ export async function updateExpenseAction(
     data: {
       transactionDate,
       amount,
-      walletId: wallet.id,
-      categoryId: category.id,
+      walletId: parsed.data.walletId,
+      categoryId: parsed.data.categoryId,
       subCategoryId: null,
       description: parsed.data.description || null,
       updatedById: currentUser.id
@@ -309,46 +246,13 @@ export async function createTopUpAction(
     };
   }
 
-  const [wallet, sourceAccount] = await Promise.all([
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.walletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.sourceAccount.findFirst({
-      where: {
-        id: parsed.data.sourceAccountId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
-
-  if (!wallet) {
-    return {
-      error: "Wallet tujuan tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!sourceAccount) {
-    return {
-      error: "Source account tidak ditemukan atau tidak aktif."
-    };
-  }
-
   await prisma.transaction.create({
     data: {
       type: "top_up",
       transactionDate,
       amount,
-      walletId: wallet.id,
-      sourceAccountId: sourceAccount.id,
+      walletId: parsed.data.walletId,
+      sourceAccountId: parsed.data.sourceAccountId,
       description: parsed.data.description || null,
       createdById: currentUser.id
     }
@@ -401,52 +305,20 @@ export async function updateTopUpAction(
     };
   }
 
-  const [transaction, wallet, sourceAccount] = await Promise.all([
-    prisma.transaction.findFirst({
-      where: {
-        id: transactionId,
-        type: "top_up",
-        deletedAt: null
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.walletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.sourceAccount.findFirst({
-      where: {
-        id: parsed.data.sourceAccountId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      id: transactionId,
+      type: "top_up",
+      deletedAt: null
+    },
+    select: {
+      id: true
+    }
+  });
 
   if (!transaction) {
     return {
       error: "Top up tidak ditemukan atau sudah dihapus."
-    };
-  }
-
-  if (!wallet) {
-    return {
-      error: "Wallet tujuan tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!sourceAccount) {
-    return {
-      error: "Source account tidak ditemukan atau tidak aktif."
     };
   }
 
@@ -457,8 +329,8 @@ export async function updateTopUpAction(
     data: {
       transactionDate,
       amount,
-      walletId: wallet.id,
-      sourceAccountId: sourceAccount.id,
+      walletId: parsed.data.walletId,
+      sourceAccountId: parsed.data.sourceAccountId,
       description: parsed.data.description || null,
       updatedById: currentUser.id
     }
@@ -510,46 +382,13 @@ export async function createTransferAction(
     };
   }
 
-  const [fromWallet, toWallet] = await Promise.all([
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.fromWalletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.toWalletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
-
-  if (!fromWallet) {
-    return {
-      error: "Wallet asal tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!toWallet) {
-    return {
-      error: "Wallet tujuan tidak ditemukan atau tidak aktif."
-    };
-  }
-
   await prisma.transaction.create({
     data: {
       type: "transfer",
       transactionDate,
       amount,
-      fromWalletId: fromWallet.id,
-      toWalletId: toWallet.id,
+      fromWalletId: parsed.data.fromWalletId,
+      toWalletId: parsed.data.toWalletId,
       description: parsed.data.description || null,
       createdById: currentUser.id
     }
@@ -608,52 +447,20 @@ export async function updateTransferAction(
     };
   }
 
-  const [transaction, fromWallet, toWallet] = await Promise.all([
-    prisma.transaction.findFirst({
-      where: {
-        id: transactionId,
-        type: "transfer",
-        deletedAt: null
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.fromWalletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    }),
-    prisma.wallet.findFirst({
-      where: {
-        id: parsed.data.toWalletId,
-        isActive: true
-      },
-      select: {
-        id: true
-      }
-    })
-  ]);
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      id: transactionId,
+      type: "transfer",
+      deletedAt: null
+    },
+    select: {
+      id: true
+    }
+  });
 
   if (!transaction) {
     return {
       error: "Transfer tidak ditemukan atau sudah dihapus."
-    };
-  }
-
-  if (!fromWallet) {
-    return {
-      error: "Wallet asal tidak ditemukan atau tidak aktif."
-    };
-  }
-
-  if (!toWallet) {
-    return {
-      error: "Wallet tujuan tidak ditemukan atau tidak aktif."
     };
   }
 
@@ -664,8 +471,8 @@ export async function updateTransferAction(
     data: {
       transactionDate,
       amount,
-      fromWalletId: fromWallet.id,
-      toWalletId: toWallet.id,
+      fromWalletId: parsed.data.fromWalletId,
+      toWalletId: parsed.data.toWalletId,
       description: parsed.data.description || null,
       updatedById: currentUser.id
     }
@@ -684,7 +491,8 @@ export async function deleteTransactionAction(
 
   if (typeof transactionId !== "string" || !transactionId) {
     return {
-      error: "Transaksi tidak valid."
+      error: "Transaksi tidak valid.",
+      success: false
     };
   }
 
@@ -700,7 +508,8 @@ export async function deleteTransactionAction(
 
   if (!transaction) {
     return {
-      error: "Transaksi tidak ditemukan atau sudah dihapus."
+      error: "Transaksi tidak ditemukan atau sudah dihapus.",
+      success: false
     };
   }
 
@@ -718,7 +527,8 @@ export async function deleteTransactionAction(
   revalidateTransactionViews();
 
   return {
-    error: null
+    error: null,
+    success: true
   };
 }
 
@@ -731,7 +541,8 @@ export async function restoreTransactionAction(
 
   if (typeof transactionId !== "string" || !transactionId) {
     return {
-      error: "Transaksi tidak valid."
+      error: "Transaksi tidak valid.",
+      success: false
     };
   }
 
@@ -749,7 +560,8 @@ export async function restoreTransactionAction(
 
   if (!transaction) {
     return {
-      error: "Transaksi tidak ditemukan atau sudah aktif."
+      error: "Transaksi tidak ditemukan atau sudah aktif.",
+      success: false
     };
   }
 
@@ -767,6 +579,7 @@ export async function restoreTransactionAction(
   revalidateTransactionViews();
 
   return {
-    error: null
+    error: null,
+    success: true
   };
 }

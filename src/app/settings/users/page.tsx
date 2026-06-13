@@ -8,23 +8,35 @@ import { prisma } from "@/lib/db/prisma";
 export default async function UsersSettingsPage() {
   const currentUser = await requireUser();
 
-  const users = await prisma.user.findMany({
-    orderBy: [
-      {
-        role: "asc"
-      },
-      {
-        displayName: "asc"
-      }
-    ],
-    include: {
-      _count: {
-        select: {
-          createdTransactions: true
+  const [users, transactionCounts] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: [
+        {
+          role: "asc"
+        },
+        {
+          displayName: "asc"
         }
+      ],
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        role: true,
+        isActive: true
       }
-    }
-  });
+    }),
+    prisma.transaction.groupBy({
+      by: ["createdById"],
+      _count: {
+        _all: true
+      }
+    })
+  ]);
+
+  const transactionCountByUserId = new Map(
+    transactionCounts.map((count) => [count.createdById, count._count._all])
+  );
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
@@ -51,7 +63,7 @@ export default async function UsersSettingsPage() {
             displayName: user.displayName,
             role: user.role,
             isActive: user.isActive,
-            transactionCount: user._count.createdTransactions,
+            transactionCount: transactionCountByUserId.get(user.id) ?? 0,
             isCurrentUser: user.id === currentUser.id
           }))}
         />
