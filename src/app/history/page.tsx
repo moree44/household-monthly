@@ -20,6 +20,7 @@ import {
   type HistoryTypeFilter,
   type HistoryWeekFilter
 } from "@/features/history/data";
+import { InstantHistoryLink } from "@/features/history/components/instant-history-link";
 import { DeleteTransactionButton } from "@/features/transactions/components/delete-transaction-button";
 import { RestoreTransactionButton } from "@/features/transactions/components/restore-transaction-button";
 import { formatRupiah } from "@/lib/format/currency";
@@ -145,7 +146,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
         </header>
 
         <div className="mt-4 flex items-center justify-between rounded-[16px] bg-[#E5E5E5] p-1.5 shadow-sm">
-          <Link
+          <InstantHistoryLink
             href={withMonthParam(
               "/history",
               history.previousMonthKey,
@@ -155,16 +156,18 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                 weekFilter: history.weekFilter
               })
             )}
-            className="grid h-9 w-9 place-items-center rounded-[12px] bg-[#F5F5F5] text-[#525252] transition hover:bg-[#D4D4D4]"
-            aria-label="Bulan sebelumnya"
+            className="grid h-9 w-9 place-items-center rounded-[12px] transition"
+            activeClassName="bg-[#171717] text-[#FAFAFA]"
+            inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#D4D4D4]"
+            ariaLabel="Bulan sebelumnya"
           >
             <ChevronLeft size={18} strokeWidth={1.8} />
-          </Link>
+          </InstantHistoryLink>
           <div className="text-center">
             <p className="text-xs font-bold uppercase tracking-normal text-[#737373]">periode</p>
             <p className="text-sm font-bold text-[#171717]">{history.monthLabel}</p>
           </div>
-          <Link
+          <InstantHistoryLink
             href={withMonthParam(
               "/history",
               history.nextMonthKey,
@@ -174,17 +177,19 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                 weekFilter: history.weekFilter
               })
             )}
-            className="grid h-9 w-9 place-items-center rounded-[12px] bg-[#F5F5F5] text-[#525252] transition hover:bg-[#D4D4D4]"
-            aria-label="Bulan berikutnya"
+            className="grid h-9 w-9 place-items-center rounded-[12px] transition"
+            activeClassName="bg-[#171717] text-[#FAFAFA]"
+            inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#D4D4D4]"
+            ariaLabel="Bulan berikutnya"
           >
             <ChevronRight size={18} strokeWidth={1.8} />
-          </Link>
+          </InstantHistoryLink>
         </div>
 
         <div className="mt-5 rounded-[20px] bg-[#E5E5E5] p-2 shadow-sm">
           <div className="grid grid-cols-2 gap-2">
           {statusFilters.map((filter) => (
-            <Link
+            <InstantHistoryLink
               key={filter.value}
               href={withMonthParam(
                 "/history",
@@ -195,16 +200,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                   weekFilter: history.weekFilter
                 })
               )}
-              className={cn(
-                "inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-bold transition",
-                history.statusFilter === filter.value
-                  ? "bg-[#171717] text-[#FAFAFA]"
-                  : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
-              )}
-              style={history.statusFilter === filter.value ? { color: "#FAFAFA" } : undefined}
+              active={history.statusFilter === filter.value}
+              className="inline-flex h-9 items-center justify-center rounded-[13px] px-4 text-sm font-bold transition"
+              activeClassName="bg-[#171717] text-[#FAFAFA]"
+              inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
             >
               {filter.label}
-            </Link>
+            </InstantHistoryLink>
           ))}
           </div>
 
@@ -212,7 +214,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
             <p className="px-1 text-[10px] font-bold uppercase tracking-normal text-[#737373]">Tipe</p>
             <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {filters.map((filter) => (
-                <Link
+                <InstantHistoryLink
                   key={filter.value}
                   href={withMonthParam(
                     "/history",
@@ -223,16 +225,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                       weekFilter: history.weekFilter
                     })
                   )}
-                  className={cn(
-                    "inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition",
-                    history.typeFilter === filter.value
-                      ? "bg-[#171717] text-[#FAFAFA]"
-                      : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
-                  )}
-                  style={history.typeFilter === filter.value ? { color: "#FAFAFA" } : undefined}
+                  active={history.typeFilter === filter.value}
+                  className="inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition"
+                  activeClassName="bg-[#171717] text-[#FAFAFA]"
+                  inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
                 >
                   {filter.label}
-                </Link>
+                </InstantHistoryLink>
               ))}
             </div>
           </div>
@@ -247,7 +246,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
               </p>
             </div>
             <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <Link
+              <InstantHistoryLink
                 href={withMonthParam(
                   "/history",
                   history.monthKey,
@@ -257,18 +256,15 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                     weekFilter: "all"
                   })
                 )}
-                className={cn(
-                  "inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition",
-                  history.weekFilter === "all"
-                    ? "bg-[#171717] text-[#FAFAFA]"
-                    : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
-                )}
-                style={history.weekFilter === "all" ? { color: "#FAFAFA" } : undefined}
+                active={history.weekFilter === "all"}
+                className="inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition"
+                activeClassName="bg-[#171717] text-[#FAFAFA]"
+                inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
               >
                 Semua
-              </Link>
+              </InstantHistoryLink>
               {history.weeks.map((week) => (
-                <Link
+                <InstantHistoryLink
                   key={week.value}
                   href={withMonthParam(
                     "/history",
@@ -279,16 +275,13 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                       weekFilter: week.value
                     })
                   )}
-                  className={cn(
-                    "inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition",
-                    history.weekFilter === week.value
-                      ? "bg-[#171717] text-[#FAFAFA]"
-                      : "bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
-                  )}
-                  style={history.weekFilter === week.value ? { color: "#FAFAFA" } : undefined}
+                  active={history.weekFilter === week.value}
+                  className="inline-flex h-8 shrink-0 items-center rounded-[11px] px-3 text-[11px] font-bold transition"
+                  activeClassName="bg-[#171717] text-[#FAFAFA]"
+                  inactiveClassName="bg-[#F5F5F5] text-[#525252] hover:bg-[#FAFAFA]"
                 >
                   {week.label}
-                </Link>
+                </InstantHistoryLink>
               ))}
             </div>
           </div>

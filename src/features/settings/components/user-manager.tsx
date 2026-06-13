@@ -9,6 +9,7 @@ import {
   toggleUserAction,
   updateUserAction
 } from "@/features/settings/user-actions";
+import { StatusBadge } from "@/features/settings/components/status-badge";
 
 type UserItem = {
   id: string;
@@ -44,18 +45,6 @@ function SubmitButton({ children, variant = "dark" }: { children: React.ReactNod
     >
       {children}
     </button>
-  );
-}
-
-function StatusText({ error, success }: { error: string | null; success: string | null }) {
-  if (!error && !success) {
-    return null;
-  }
-
-  return (
-    <p className={`mt-2 text-xs font-bold ${error ? "text-red-600" : "text-emerald-600"}`}>
-      {error ?? success}
-    </p>
   );
 }
 
@@ -128,7 +117,7 @@ function UserRow({ user }: { user: UserItem }) {
               <span>{user.isActive ? "aktif" : "nonaktif"}</span>
               {user.isCurrentUser ? <span>akun ini</span> : null}
             </div>
-            <StatusText error={updateState.error} success={updateState.success} />
+            <StatusBadge error={updateState.error} success={updateState.success} />
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -142,7 +131,7 @@ function UserRow({ user }: { user: UserItem }) {
           </RowActionButton>
         </div>
       </form>
-      <StatusText error={toggleState.error} success={toggleState.success} />
+      <StatusBadge error={toggleState.error} success={toggleState.success} />
     </div>
   );
 }
@@ -196,7 +185,7 @@ export function UserManager({ users }: UserManagerProps) {
             <Plus size={15} strokeWidth={2} />
             Tambah
           </SubmitButton>
-          <StatusText error={createState.error} success={createState.success} />
+          <StatusBadge error={createState.error} success={createState.success} />
         </form>
       </section>
 

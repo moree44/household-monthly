@@ -9,6 +9,7 @@ import {
   toggleWalletAction,
   updateWalletAction
 } from "@/features/settings/wallet-actions";
+import { StatusBadge } from "@/features/settings/components/status-badge";
 import { formatRupiah } from "@/lib/format/currency";
 
 type WalletItem = {
@@ -58,18 +59,6 @@ function SubmitButton({ children, variant = "dark" }: { children: React.ReactNod
     >
       {children}
     </button>
-  );
-}
-
-function StatusText({ error, success }: { error: string | null; success: string | null }) {
-  if (!error && !success) {
-    return null;
-  }
-
-  return (
-    <p className={`mt-2 text-xs font-bold ${error ? "text-red-600" : "text-emerald-600"}`}>
-      {error ?? success}
-    </p>
   );
 }
 
@@ -143,7 +132,7 @@ function WalletRow({ wallet }: { wallet: WalletItem }) {
                 saldo awal <span className="text-sm text-[#525252]">{formatRupiah(wallet.initialBalance)}</span>
               </span>
             </div>
-            <StatusText error={updateState.error} success={updateState.success} />
+            <StatusBadge error={updateState.error} success={updateState.success} />
           </div>
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -157,7 +146,7 @@ function WalletRow({ wallet }: { wallet: WalletItem }) {
           </RowActionButton>
         </div>
       </form>
-      <StatusText error={toggleState.error} success={toggleState.success} />
+      <StatusBadge error={toggleState.error} success={toggleState.success} />
     </div>
   );
 }
@@ -206,7 +195,7 @@ export function WalletManager({ wallets }: WalletManagerProps) {
             <Plus size={15} strokeWidth={2} />
             Tambah
           </SubmitButton>
-          <StatusText error={createState.error} success={createState.success} />
+          <StatusBadge error={createState.error} success={createState.success} />
         </form>
       </section>
 
