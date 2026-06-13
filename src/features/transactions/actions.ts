@@ -70,6 +70,12 @@ function parseTransactionDate(value: string) {
   return date;
 }
 
+function revalidateTransactionViews() {
+  revalidatePath("/dashboard");
+  revalidatePath("/history");
+  revalidatePath("/profile");
+}
+
 export async function createExpenseAction(
   _prevState: ExpenseFormState,
   formData: FormData
@@ -152,6 +158,7 @@ export async function createExpenseAction(
     }
   });
 
+  revalidateTransactionViews();
   redirect("/dashboard");
 }
 
@@ -262,8 +269,7 @@ export async function updateExpenseAction(
     }
   });
 
-  revalidatePath("/history");
-  revalidatePath("/dashboard");
+  revalidateTransactionViews();
   redirect("/history");
 }
 
@@ -348,6 +354,7 @@ export async function createTopUpAction(
     }
   });
 
+  revalidateTransactionViews();
   redirect("/dashboard");
 }
 
@@ -457,8 +464,7 @@ export async function updateTopUpAction(
     }
   });
 
-  revalidatePath("/history");
-  revalidatePath("/dashboard");
+  revalidateTransactionViews();
   redirect("/history");
 }
 
@@ -549,6 +555,7 @@ export async function createTransferAction(
     }
   });
 
+  revalidateTransactionViews();
   redirect("/dashboard");
 }
 
@@ -664,8 +671,7 @@ export async function updateTransferAction(
     }
   });
 
-  revalidatePath("/history");
-  revalidatePath("/dashboard");
+  revalidateTransactionViews();
   redirect("/history");
 }
 
@@ -709,8 +715,7 @@ export async function deleteTransactionAction(
     }
   });
 
-  revalidatePath("/history");
-  revalidatePath("/dashboard");
+  revalidateTransactionViews();
 
   return {
     error: null
@@ -759,8 +764,7 @@ export async function restoreTransactionAction(
     }
   });
 
-  revalidatePath("/history");
-  revalidatePath("/dashboard");
+  revalidateTransactionViews();
 
   return {
     error: null
