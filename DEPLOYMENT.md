@@ -70,8 +70,14 @@ For future migrations against Neon, use:
 set -a
 source .env.local-neon
 set +a
-npx prisma migrate deploy
+npm run prisma:migrate:deploy
 ```
+
+Latest applied performance migration:
+
+- `20260613000000_add_transaction_query_indexes`
+
+This adds indexes for Dashboard, History, wallet balance, and category/month queries.
 
 Only run seed again if the target database is empty or intentionally being reset:
 
@@ -137,7 +143,7 @@ If there is a new Prisma migration:
 set -a
 source .env.local-neon
 set +a
-npx prisma migrate deploy
+npm run prisma:migrate:deploy
 ```
 
 Then push to GitHub and let Vercel redeploy.
@@ -147,5 +153,6 @@ Then push to GitHub and let Vercel redeploy.
 - Never commit `.env`.
 - Never commit `.env.local-neon`.
 - Do not use `password123` in production.
+- Rotate Neon password and `AUTH_SECRET` if setup values were pasted/shared during development.
 - Cloudflare Tunnel quick URLs are public while the tunnel runs.
 - Use a private GitHub repo.

@@ -30,6 +30,8 @@ Fitur utama yang sudah berjalan:
 - User management
 - Goals manual
 - Responsive mobile-first UI
+- Vercel + Neon PostgreSQL production deployment
+- Route loading skeletons and optimized dashboard/history queries
 
 ## Local Setup
 
@@ -151,6 +153,7 @@ npm run lint
 npx tsc --noEmit
 npm run build
 npm run prisma:migrate
+npm run prisma:migrate:deploy
 npm run db:seed
 npm run prisma:studio
 npx prisma studio
@@ -209,7 +212,16 @@ npm install
 npm run prisma:migrate
 ```
 
-`npm install` hanya wajib jika dependency berubah. `prisma:migrate` wajib jika ada migration baru.
+`npm install` hanya wajib jika dependency berubah. `prisma:migrate` wajib jika ada migration lokal baru.
+
+Jika ada migration baru untuk database Neon production, gunakan:
+
+```bash
+set -a
+source .env.local-neon
+set +a
+npm run prisma:migrate:deploy
+```
 
 ## Deployment Direction
 
@@ -221,6 +233,14 @@ Target deploy:
 - Environment variables disimpan di Vercel, bukan di repo
 
 Neon database sudah dibuat dan migration/seed awal sudah selesai. Untuk sinkron data antar PC/laptop/Vercel, gunakan database cloud yang sama.
+
+Production performance notes:
+
+- Vercel functions diarahkan ke Singapore.
+- Dashboard memakai grouped aggregate queries untuk saldo wallet.
+- History query hanya mengambil field yang dipakai UI.
+- Transaction indexes sudah ditambahkan untuk data jangka panjang.
+- Delay singkat setelah idle masih mungkin terjadi karena serverless cold start.
 
 Detail deployment ada di:
 

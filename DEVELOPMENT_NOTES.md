@@ -12,7 +12,7 @@ Tujuan utama:
 - Lihat ringkasan bulanan.
 - Kelola saldo wallet rumah tangga.
 - Kelola kategori, wallet, user, dan goals.
-- Deploy pribadi ke Vercel setelah MVP stabil.
+- Deploy pribadi ke Vercel dan Neon PostgreSQL.
 
 ## Current Tech
 
@@ -53,6 +53,12 @@ Migration dan seed:
 ```bash
 npm run prisma:migrate
 npm run db:seed
+```
+
+Cloud migration deploy:
+
+```bash
+npm run prisma:migrate:deploy
 ```
 
 Verification:
@@ -177,6 +183,13 @@ cloudflared tunnel --url http://localhost:3000
   - iPhone safe-area top/bottom handling
 - Dashboard Recent Transactions memakai icon per tipe transaksi.
 - Delete/restore confirmation di History tidak overflow ke kanan pada mobile.
+- Vercel deployment dengan Neon PostgreSQL.
+- Singapore preferred region for Vercel functions.
+- Route loading skeletons for smoother mobile navigation.
+- Transaction create/update/delete/restore revalidates Dashboard, History, and Profile views.
+- Dashboard data loading optimized with grouped aggregate queries.
+- History data loading optimized to select only fields used by the UI.
+- Production database indexes for long-term transaction growth.
 
 ## Important Product Decisions
 
@@ -294,31 +307,92 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 - Browser extension can cause React hydration warning by injecting HTML attributes. Test in incognito if needed.
 - Cloudflare Tunnel quick URLs are temporary and public while the tunnel process is running.
 - `next-env.d.ts` may flip between `.next/dev/types/routes.d.ts` and `.next/types/routes.d.ts` after dev/build; do not commit this flip unless intentionally needed.
+- `.env.local-neon` must not be pushed to GitHub.
+- Neon/Vercel free/serverless setup can still have cold start delay after idle, even after query optimization.
+- If credentials were pasted/shared during setup, rotate Neon password and `AUTH_SECRET` before serious daily use.
+
+## 2026-06-13 Production Performance Update
+
+Goal: keep the app smooth for long-term daily use, especially quick transaction input on mobile.
+
+Completed:
+
+- Vercel production deploy is live.
+- Neon PostgreSQL production database is live in Singapore.
+- Vercel functions prefer Singapore region via `preferredRegion = "sin1"`.
+- Prisma Client generation runs during Vercel install via `postinstall`.
+- Bottom navigation uses route prefetch and loading skeletons for smoother page transitions.
+- Removed redundant manual nav prefetcher to avoid duplicate route prefetch work.
+- Transaction create/update/delete/restore now calls `revalidatePath` for:
+  - `/dashboard`
+  - `/history`
+  - `/profile`
+- Dashboard balance calculation was refactored away from loading all transaction rows.
+- Dashboard now uses grouped aggregate queries for:
+  - wallet direct transaction balance
+  - transfer out balance
+  - transfer in balance
+- Wife summary queries are included in the main `Promise.all`.
+- History query now uses `select` for only the fields needed by the UI.
+- Added production database indexes:
+  - `deleted_at + transaction_date`
+  - `type + deleted_at + transaction_date`
+  - `wallet_id + deleted_at`
+  - `from_wallet_id + deleted_at`
+  - `to_wallet_id + deleted_at`
+  - `category_id + deleted_at + transaction_date`
+- Migration applied to Neon:
+  - `20260613000000_add_transaction_query_indexes`
+
+Verification:
+
+```bash
+npm run lint
+npx tsc --noEmit
+```
+
+Both passed.
+
+Production notes:
+
+- After save, there can still be a short delay because the app writes to Neon, revalidates views, and redirects.
+- The delay should be more stable now as data grows because dashboard/history queries are lighter.
+- If production feels slow after being idle, likely cause is serverless cold start from Vercel/Neon.
+- For future Prisma migrations against Neon, use:
+
+```bash
+set -a
+source .env.local-neon
+set +a
+npm run prisma:migrate:deploy
+```
 
 ## Recommended Next Steps
 
-1. After pulling laptop changes on PC utama, run:
+1. Rotate production secrets before serious daily use:
+   - reset Neon database password
+   - update `DATABASE_URL` and `DIRECT_URL` in Vercel and local `.env.local-neon`
+   - generate new `AUTH_SECRET`
+   - redeploy Vercel
+2. After pulling laptop changes on PC utama, run:
    - `npm install` if dependency changes exist
    - `npm run prisma:migrate`
    - `npm run lint`
    - `npx tsc --noEmit`
    - `npm run build`
-2. Change default seed passwords before serious use:
+3. Change default seed passwords before serious use:
    - new environment: set `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD` before seed
    - existing users: update via Profil -> Kelola Pengguna
-3. Deploy to Vercel using the Neon env values from `.env.local-neon`.
-   - Follow `DEPLOYMENT.md`.
-4. Run production smoke test after Vercel deploy:
+4. Run production smoke test after each important Vercel deploy:
    - login
    - create Expense
    - create Transfer
    - create Top Up
    - delete/restore
    - test iPhone Add to Home Screen from production URL
-5. Polish PWA smoothness if needed:
-   - route loading skeletons
-   - stronger bottom-nav pressed states
-   - route/data prefetch where useful
+5. Polish remaining PWA smoothness if needed:
+   - stronger pressed states
+   - smaller perceived delay after save
 6. Polish Profile/settings detail if needed.
 7. Add category/wallet icons later.
 
@@ -329,6 +403,7 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 - Region: AWS Asia Pacific 1, Singapore.
 - Database: `neondb`.
 - Migrations applied with `npx prisma migrate deploy`.
+- Latest performance index migration applied with `npm run prisma:migrate:deploy`.
 - Seed completed with custom `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD`.
 - Initial cloud data verified:
   - 2 users
@@ -345,10 +420,10 @@ PWA Home Screen mode should feel close to a mini app on iOS Safari. Bottom navig
 
 ## Not Done Yet
 
-- Vercel deployment is not configured yet.
-- Production smoke test after Vercel deployment is not completed yet.
-- Confirm production user passwords are stored safely and not using old default `password123`.
-- Route transitions are functional but can still be made smoother with extra prefetch polish if needed.
+- Rotate Neon password and `AUTH_SECRET` because setup secrets were pasted/shared during development.
+- Confirm production user passwords are strong enough for daily use.
+- Production smoke test after every performance/deploy change.
+- Extra PWA smoothness polish if production still feels delayed after idle.
 
 ## GitHub Handoff Plan
 
