@@ -22,13 +22,27 @@ function decimalToNumber(value: { toString(): string } | null | undefined) {
   return Number(value.toString());
 }
 
-function transactionSign(type: TransactionType) {
+function signedWalletTransactionAmount({
+  amount,
+  adjustmentDirection,
+  type
+}: {
+  amount: { toString(): string } | null | undefined;
+  adjustmentDirection: "increase" | "decrease" | null;
+  type: TransactionType;
+}) {
+  const numericAmount = decimalToNumber(amount);
+
   if (type === "top_up") {
-    return 1;
+    return numericAmount;
   }
 
   if (type === "expense") {
-    return -1;
+    return -numericAmount;
+  }
+
+  if (type === "adjustment") {
+    return adjustmentDirection === "decrease" ? -numericAmount : numericAmount;
   }
 
   return 0;
@@ -37,160 +51,217 @@ function transactionSign(type: TransactionType) {
 export async function getDashboardData(month: MonthContext) {
   const { start, end } = month;
 
-  const [wallets, monthExpenseSum, monthTopUpSum, homeSetupExpenseSum, categoryGroups, recentTransactions] =
-    await Promise.all([
-      prisma.wallet.findMany({
-        orderBy: {
-          sortOrder: "asc"
+  const [
+    wallets,
+    walletTransactionGroups,
+    transferOutGroups,
+    transferInGroups,
+    monthExpenseSum,
+    monthTopUpSum,
+    homeSetupExpenseSum,
+    categoryGroups,
+    recentTransactions,
+    wifeExpense,
+    wifeTransferIn
+  ] = await Promise.all([
+    prisma.wallet.findMany({
+      orderBy: {
+        sortOrder: "asc"
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        initialBalance: true
+      }
+    }),
+    prisma.transaction.groupBy({
+      by: ["walletId", "type", "adjustmentDirection"],
+      where: {
+        deletedAt: null,
+        walletId: {
+          not: null
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.groupBy({
+      by: ["fromWalletId"],
+      where: {
+        deletedAt: null,
+        type: "transfer",
+        fromWalletId: {
+          not: null
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.groupBy({
+      by: ["toWalletId"],
+      where: {
+        deletedAt: null,
+        type: "transfer",
+        toWalletId: {
+          not: null
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        type: "expense",
+        deletedAt: null,
+        transactionDate: {
+          gte: start,
+          lt: end
         },
-        include: {
-          transactions: {
-            where: {
-              deletedAt: null
-            },
-            select: {
-              type: true,
-              amount: true,
-              adjustmentDirection: true
-            }
-          },
-          transfersOut: {
-            where: {
-              deletedAt: null,
-              type: "transfer"
-            },
-            select: {
-              amount: true
-            }
-          },
-          transfersIn: {
-            where: {
-              deletedAt: null,
-              type: "transfer"
-            },
-            select: {
-              amount: true
-            }
+        wallet: {
+          type: {
+            in: ["operational", "wife"]
           }
         }
-      }),
-      prisma.transaction.aggregate({
-        where: {
-          type: "expense",
-          deletedAt: null,
-          transactionDate: {
-            gte: start,
-            lt: end
-          },
-          wallet: {
-            type: {
-              in: ["operational", "wife"]
-            }
-          }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        type: "top_up",
+        deletedAt: null,
+        transactionDate: {
+          gte: start,
+          lt: end
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        type: "expense",
+        deletedAt: null,
+        transactionDate: {
+          gte: start,
+          lt: end
         },
+        wallet: {
+          type: "home_setup"
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.groupBy({
+      by: ["categoryId"],
+      where: {
+        type: "expense",
+        deletedAt: null,
+        categoryId: {
+          not: null
+        },
+        transactionDate: {
+          gte: start,
+          lt: end
+        },
+        wallet: {
+          type: {
+            in: ["operational", "wife"]
+          }
+        }
+      },
+      _sum: {
+        amount: true
+      },
+      orderBy: {
         _sum: {
-          amount: true
+          amount: "desc"
         }
-      }),
-      prisma.transaction.aggregate({
-        where: {
-          type: "top_up",
-          deletedAt: null,
-          transactionDate: {
-            gte: start,
-            lt: end
-          }
+      },
+      take: 5
+    }),
+    prisma.transaction.findMany({
+      where: {
+        deletedAt: null
+      },
+      orderBy: [
+        {
+          transactionDate: "desc"
         },
-        _sum: {
-          amount: true
+        {
+          createdAt: "desc"
         }
-      }),
-      prisma.transaction.aggregate({
-        where: {
-          type: "expense",
-          deletedAt: null,
-          transactionDate: {
-            gte: start,
-            lt: end
-          },
-          wallet: {
-            type: "home_setup"
+      ],
+      take: 5,
+      include: {
+        wallet: {
+          select: {
+            name: true
           }
         },
-        _sum: {
-          amount: true
-        }
-      }),
-      prisma.transaction.groupBy({
-        by: ["categoryId"],
-        where: {
-          type: "expense",
-          deletedAt: null,
-          categoryId: {
-            not: null
-          },
-          transactionDate: {
-            gte: start,
-            lt: end
-          },
-          wallet: {
-            type: {
-              in: ["operational", "wife"]
-            }
+        fromWallet: {
+          select: {
+            name: true
           }
         },
-        _sum: {
-          amount: true
-        },
-        orderBy: {
-          _sum: {
-            amount: "desc"
+        toWallet: {
+          select: {
+            name: true
           }
         },
-        take: 5
-      }),
-      prisma.transaction.findMany({
-        where: {
-          deletedAt: null
-        },
-        orderBy: [
-          {
-            transactionDate: "desc"
-          },
-          {
-            createdAt: "desc"
+        sourceAccount: {
+          select: {
+            name: true
           }
-        ],
-        take: 5,
-        include: {
-          wallet: {
-            select: {
-              name: true
-            }
-          },
-          fromWallet: {
-            select: {
-              name: true
-            }
-          },
-          toWallet: {
-            select: {
-              name: true
-            }
-          },
-          sourceAccount: {
-            select: {
-              name: true
-            }
-          },
-          category: {
-            select: {
-              name: true
-            }
+        },
+        category: {
+          select: {
+            name: true
           }
         }
-      })
-    ]);
+      }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        type: "expense",
+        deletedAt: null,
+        wallet: {
+          type: "wife"
+        },
+        transactionDate: {
+          gte: start,
+          lt: end
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        type: "transfer",
+        deletedAt: null,
+        toWallet: {
+          type: "wife"
+        },
+        transactionDate: {
+          gte: start,
+          lt: end
+        }
+      },
+      _sum: {
+        amount: true
+      }
+    })
+  ]);
 
   const categoryIds = categoryGroups.flatMap((group) => (group.categoryId ? [group.categoryId] : []));
   const categories = await prisma.category.findMany({
@@ -207,24 +278,44 @@ export async function getDashboardData(month: MonthContext) {
 
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
 
+  const walletTransactionBalanceById = new Map<string, number>();
+  const transferOutByWalletId = new Map<string, number>();
+  const transferInByWalletId = new Map<string, number>();
+
+  for (const group of walletTransactionGroups) {
+    if (!group.walletId) {
+      continue;
+    }
+
+    const currentBalance = walletTransactionBalanceById.get(group.walletId) ?? 0;
+
+    walletTransactionBalanceById.set(
+      group.walletId,
+      currentBalance +
+        signedWalletTransactionAmount({
+          amount: group._sum.amount,
+          adjustmentDirection: group.adjustmentDirection,
+          type: group.type
+        })
+    );
+  }
+
+  for (const group of transferOutGroups) {
+    if (group.fromWalletId) {
+      transferOutByWalletId.set(group.fromWalletId, decimalToNumber(group._sum.amount));
+    }
+  }
+
+  for (const group of transferInGroups) {
+    if (group.toWalletId) {
+      transferInByWalletId.set(group.toWalletId, decimalToNumber(group._sum.amount));
+    }
+  }
+
   const walletSummaries = wallets.map((wallet) => {
-    const transactionBalance = wallet.transactions.reduce((sum, transaction) => {
-      if (transaction.type === "adjustment") {
-        const amount = decimalToNumber(transaction.amount);
-        return transaction.adjustmentDirection === "decrease" ? sum - amount : sum + amount;
-      }
-
-      return sum + decimalToNumber(transaction.amount) * transactionSign(transaction.type);
-    }, 0);
-
-    const transferOut = wallet.transfersOut.reduce(
-      (sum, transaction) => sum + decimalToNumber(transaction.amount),
-      0
-    );
-    const transferIn = wallet.transfersIn.reduce(
-      (sum, transaction) => sum + decimalToNumber(transaction.amount),
-      0
-    );
+    const transactionBalance = walletTransactionBalanceById.get(wallet.id) ?? 0;
+    const transferOut = transferOutByWalletId.get(wallet.id) ?? 0;
+    const transferIn = transferInByWalletId.get(wallet.id) ?? 0;
 
     return {
       id: wallet.id,
@@ -236,39 +327,6 @@ export async function getDashboardData(month: MonthContext) {
   });
 
   const wifeWallet = walletSummaries.find((wallet) => wallet.type === "wife");
-  const wifeExpense = await prisma.transaction.aggregate({
-    where: {
-      type: "expense",
-      deletedAt: null,
-      wallet: {
-        type: "wife"
-      },
-      transactionDate: {
-        gte: start,
-        lt: end
-      }
-    },
-    _sum: {
-      amount: true
-    }
-  });
-
-  const wifeTransferIn = await prisma.transaction.aggregate({
-    where: {
-      type: "transfer",
-      deletedAt: null,
-      toWallet: {
-        type: "wife"
-      },
-      transactionDate: {
-        gte: start,
-        lt: end
-      }
-    },
-    _sum: {
-      amount: true
-    }
-  });
 
   const categorySummaries = categoryGroups.map((group) => ({
     id: group.categoryId ?? "uncategorized",

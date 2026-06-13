@@ -2,7 +2,6 @@ import { CircleUserRound, History, Home, Plus, Target } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { withMonthParam } from "@/lib/date/month";
-import { NavPrefetcher } from "./nav-prefetcher";
 
 type BottomNavItem = "home" | "history" | "catat" | "goals" | "profile";
 
@@ -14,7 +13,6 @@ type BottomNavProps = {
 export function BottomNav({ active, monthKey }: BottomNavProps) {
   const dashboardHref = monthKey ? withMonthParam("/dashboard", monthKey) : "/dashboard";
   const historyHref = monthKey ? withMonthParam("/history", monthKey) : "/history";
-  const navHrefs = [dashboardHref, historyHref, "/expenses/new", "/goals", "/profile"];
 
   const itemClass = (item: BottomNavItem) =>
     cn(
@@ -28,7 +26,6 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
 
   return (
     <>
-      <NavPrefetcher hrefs={navHrefs} />
       <div className="h-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:hidden" />
       <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 text-[11px] font-semibold shadow-xl shadow-black/20 lg:hidden">
         <div className="grid h-full grid-cols-5 items-end">
