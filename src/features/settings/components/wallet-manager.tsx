@@ -75,15 +75,15 @@ function StatusText({ error, success }: { error: string | null; success: string 
 
 function RowActionButton({
   children,
-  formId
+  formAction
 }: {
   children: React.ReactNode;
-  formId: string;
+  formAction?: (formData: FormData) => void;
 }) {
   return (
     <button
       type="submit"
-      form={formId}
+      formAction={formAction}
       className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[12px] bg-white px-3 text-xs font-bold leading-none text-[#171717] shadow-sm transition hover:bg-[#FAFAFA]"
     >
       {children}
@@ -110,12 +110,10 @@ function WalletTypeSelect({ defaultValue }: { defaultValue?: WalletItem["type"] 
 function WalletRow({ wallet }: { wallet: WalletItem }) {
   const [updateState, updateAction] = useActionState(updateWalletAction, emptyWalletFormState);
   const [toggleState, toggleAction] = useActionState(toggleWalletAction, emptyWalletFormState);
-  const updateFormId = `update-wallet-${wallet.id}`;
-  const toggleFormId = `toggle-wallet-${wallet.id}`;
 
   return (
     <div className="rounded-[17px] bg-[#E5E5E5] p-2.5 shadow-sm">
-      <form id={updateFormId} action={updateAction} className="space-y-2">
+      <form action={updateAction} className="space-y-2">
         <input type="hidden" name="walletId" value={wallet.id} />
         <div className="flex items-start gap-2.5">
           <span
@@ -148,20 +146,17 @@ function WalletRow({ wallet }: { wallet: WalletItem }) {
             <StatusText error={updateState.error} success={updateState.success} />
           </div>
         </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <RowActionButton>
+            <Check size={14} strokeWidth={2} />
+            Simpan
+          </RowActionButton>
+          <RowActionButton formAction={toggleAction}>
+            {wallet.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
+            {wallet.isActive ? "Nonaktif" : "Aktifkan"}
+          </RowActionButton>
+        </div>
       </form>
-      <form id={toggleFormId} action={toggleAction} className="hidden">
-        <input type="hidden" name="walletId" value={wallet.id} />
-      </form>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <RowActionButton formId={updateFormId}>
-          <Check size={14} strokeWidth={2} />
-          Simpan
-        </RowActionButton>
-        <RowActionButton formId={toggleFormId}>
-          {wallet.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
-          {wallet.isActive ? "Nonaktif" : "Aktifkan"}
-        </RowActionButton>
-      </div>
       <StatusText error={toggleState.error} success={toggleState.success} />
     </div>
   );

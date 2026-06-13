@@ -105,11 +105,17 @@ function SubmitButton({ children, variant = "dark" }: { children: React.ReactNod
   );
 }
 
-function RowActionButton({ children, formId }: { children: React.ReactNode; formId: string }) {
+function RowActionButton({
+  children,
+  formAction
+}: {
+  children: React.ReactNode;
+  formAction?: (formData: FormData) => void;
+}) {
   return (
     <button
       type="submit"
-      form={formId}
+      formAction={formAction}
       className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[13px] bg-white px-3 text-xs font-bold leading-none text-[#171717] shadow-sm transition hover:bg-[#FAFAFA]"
     >
       {children}
@@ -214,8 +220,6 @@ function GoalIcon({ title }: { title: string }) {
 function GoalRow({ goal }: { goal: GoalItem }) {
   const [updateState, updateAction] = useActionState(updateGoalAction, emptyGoalFormState);
   const [toggleState, toggleAction] = useActionState(toggleGoalAction, emptyGoalFormState);
-  const updateFormId = `update-goal-${goal.id}`;
-  const toggleFormId = `toggle-goal-${goal.id}`;
 
   return (
     <div className={goal.isActive ? "rounded-[20px] bg-white p-3 shadow-sm" : "rounded-[20px] bg-[#E5E5E5] p-3 shadow-sm"}>
@@ -240,7 +244,7 @@ function GoalRow({ goal }: { goal: GoalItem }) {
 
       <GoalProgress currentAmount={goal.currentAmount} targetAmount={goal.targetAmount} />
 
-      <form id={updateFormId} action={updateAction} className="mt-3 space-y-2">
+      <form action={updateAction} className="mt-3 space-y-2">
         <input type="hidden" name="goalId" value={goal.id} />
         <input
           name="title"
@@ -260,20 +264,17 @@ function GoalRow({ goal }: { goal: GoalItem }) {
           />
         </div>
         <StatusText error={updateState.error} success={updateState.success} />
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <RowActionButton>
+            <Save size={14} strokeWidth={2} />
+            Save
+          </RowActionButton>
+          <RowActionButton formAction={toggleAction}>
+            {goal.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
+            {goal.isActive ? "Nonaktif" : "Aktifkan"}
+          </RowActionButton>
+        </div>
       </form>
-      <form id={toggleFormId} action={toggleAction} className="hidden">
-        <input type="hidden" name="goalId" value={goal.id} />
-      </form>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <RowActionButton formId={updateFormId}>
-          <Save size={14} strokeWidth={2} />
-          Save
-        </RowActionButton>
-        <RowActionButton formId={toggleFormId}>
-          {goal.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
-          {goal.isActive ? "Nonaktif" : "Aktifkan"}
-        </RowActionButton>
-      </div>
       <StatusText error={toggleState.error} success={toggleState.success} />
     </div>
   );

@@ -59,15 +59,15 @@ function StatusText({ error, success }: { error: string | null; success: string 
 
 function RowActionButton({
   children,
-  formId
+  formAction
 }: {
   children: React.ReactNode;
-  formId: string;
+  formAction?: (formData: FormData) => void;
 }) {
   return (
     <button
       type="submit"
-      form={formId}
+      formAction={formAction}
       className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[12px] bg-white px-3 text-xs font-bold leading-none text-[#171717] shadow-sm transition hover:bg-[#FAFAFA]"
     >
       {children}
@@ -78,12 +78,10 @@ function RowActionButton({
 function CategoryRow({ category }: { category: CategoryItem }) {
   const [updateState, updateAction] = useActionState(updateCategoryAction, emptyCategoryFormState);
   const [toggleState, toggleAction] = useActionState(toggleCategoryAction, emptyCategoryFormState);
-  const updateFormId = `update-category-${category.id}`;
-  const toggleFormId = `toggle-category-${category.id}`;
 
   return (
     <div className="rounded-[17px] bg-[#E5E5E5] p-2.5 shadow-sm">
-      <form id={updateFormId} action={updateAction} className="space-y-2">
+      <form action={updateAction} className="space-y-2">
         <input type="hidden" name="categoryId" value={category.id} />
         <div className="flex items-start gap-2.5">
           <span
@@ -105,20 +103,17 @@ function CategoryRow({ category }: { category: CategoryItem }) {
             <StatusText error={updateState.error} success={updateState.success} />
           </div>
         </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <RowActionButton>
+            <Check size={14} strokeWidth={2} />
+            Simpan
+          </RowActionButton>
+          <RowActionButton formAction={toggleAction}>
+            {category.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
+            {category.isActive ? "Nonaktif" : "Aktifkan"}
+          </RowActionButton>
+        </div>
       </form>
-      <form id={toggleFormId} action={toggleAction} className="hidden">
-        <input type="hidden" name="categoryId" value={category.id} />
-      </form>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <RowActionButton formId={updateFormId}>
-          <Check size={14} strokeWidth={2} />
-          Simpan
-        </RowActionButton>
-        <RowActionButton formId={toggleFormId}>
-          {category.isActive ? <X size={14} strokeWidth={2} /> : <RotateCcw size={14} strokeWidth={2} />}
-          {category.isActive ? "Nonaktif" : "Aktifkan"}
-        </RowActionButton>
-      </div>
       <StatusText error={toggleState.error} success={toggleState.success} />
     </div>
   );
