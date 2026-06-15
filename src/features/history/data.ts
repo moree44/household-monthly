@@ -1,6 +1,12 @@
 import type { TransactionType } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { MonthContext } from "@/lib/date/month";
+import {
+  formatAppDateLong,
+  formatAppMonthShort,
+  formatAppTime,
+  getAppDateParts
+} from "@/lib/date/timezone";
 
 export type HistoryTypeFilter = "all" | TransactionType;
 export type HistoryStatusFilter = "active" | "deleted";
@@ -42,18 +48,11 @@ function decimalToNumber(value: { toString(): string } | null | undefined) {
 }
 
 function formatDateGroup(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  }).format(date);
+  return formatAppDateLong(date);
 }
 
 function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
+  return formatAppTime(date);
 }
 
 function getTransactionTypeLabel(type: TransactionType) {
@@ -105,11 +104,9 @@ export function parseHistoryWeekFilter(value: string | string[] | undefined): Hi
 function getMonthWeekRanges(month: MonthContext) {
   const ranges: HistoryWeek[] = [];
 
-  const monthLabel = new Intl.DateTimeFormat("id-ID", {
-    month: "short"
-  }).format(month.start);
+  const monthLabel = formatAppMonthShort(month.start);
 
-  const lastDayOfMonth = new Date(month.end.getTime() - 1).getDate();
+  const lastDayOfMonth = getAppDateParts(new Date(month.end.getTime() - 1)).day;
 
   for (let index = 0; index < 4; index += 1) {
     const startDay = index * 7 + 1;
@@ -203,7 +200,7 @@ export async function getHistoryData(
       type: transaction.type,
       typeLabel: getTransactionTypeLabel(transaction.type),
       dateGroup: formatDateGroup(transaction.transactionDate),
-      dayOfMonth: transaction.transactionDate.getDate(),
+      dayOfMonth: getAppDateParts(transaction.transactionDate).day,
       time: formatTime(transaction.createdAt),
       title:
         transaction.category?.name ??

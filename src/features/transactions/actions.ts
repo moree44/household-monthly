@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { parseAppDateInput } from "@/lib/date/timezone";
 
 export type ExpenseFormState = {
   error: string | null;
@@ -63,9 +64,9 @@ function parseRupiahInput(value: string) {
 }
 
 function parseTransactionDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
+  const date = parseAppDateInput(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (!date || Number.isNaN(date.getTime())) {
     return null;
   }
 
@@ -76,6 +77,98 @@ function revalidateTransactionViews() {
   revalidatePath("/dashboard");
   revalidatePath("/history");
   revalidatePath("/profile");
+}
+
+async function validateActiveExpenseReferences(walletId: string, categoryId: string) {
+  const [wallet, category] = await Promise.all([
+    prisma.wallet.findFirst({
+      where: {
+        id: walletId,
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    }),
+    prisma.category.findFirst({
+      where: {
+        id: categoryId,
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    })
+  ]);
+
+  if (!wallet) {
+    return "Wallet tidak tersedia atau sudah nonaktif.";
+  }
+
+  if (!category) {
+    return "Kategori tidak tersedia atau sudah nonaktif.";
+  }
+
+  return null;
+}
+
+async function validateActiveTopUpReferences(walletId: string, sourceAccountId: string) {
+  const [wallet, sourceAccount] = await Promise.all([
+    prisma.wallet.findFirst({
+      where: {
+        id: walletId,
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    }),
+    prisma.sourceAccount.findFirst({
+      where: {
+        id: sourceAccountId,
+        isActive: true
+      },
+      select: {
+        id: true
+      }
+    })
+  ]);
+
+  if (!wallet) {
+    return "Wallet tujuan tidak tersedia atau sudah nonaktif.";
+  }
+
+  if (!sourceAccount) {
+    return "Source account tidak tersedia atau sudah nonaktif.";
+  }
+
+  return null;
+}
+
+async function validateActiveTransferWallets(fromWalletId: string, toWalletId: string) {
+  const wallets = await prisma.wallet.findMany({
+    where: {
+      id: {
+        in: [fromWalletId, toWalletId]
+      },
+      isActive: true
+    },
+    select: {
+      id: true
+    }
+  });
+
+  const activeWalletIds = new Set(wallets.map((wallet) => wallet.id));
+
+  if (!activeWalletIds.has(fromWalletId)) {
+    return "Wallet asal tidak tersedia atau sudah nonaktif.";
+  }
+
+  if (!activeWalletIds.has(toWalletId)) {
+    return "Wallet tujuan tidak tersedia atau sudah nonaktif.";
+  }
+
+  return null;
 }
 
 export async function createExpenseAction(
@@ -111,6 +204,14 @@ export async function createExpenseAction(
   if (!transactionDate) {
     return {
       error: "Format tanggal tidak valid."
+    };
+  }
+
+  const referenceError = await validateActiveExpenseReferences(parsed.data.walletId, parsed.data.categoryId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
     };
   }
 
@@ -191,6 +292,14 @@ export async function updateExpenseAction(
     };
   }
 
+  const referenceError = await validateActiveExpenseReferences(parsed.data.walletId, parsed.data.categoryId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
+    };
+  }
+
   await prisma.transaction.update({
     where: {
       id: transaction.id
@@ -243,6 +352,14 @@ export async function createTopUpAction(
   if (!transactionDate) {
     return {
       error: "Format tanggal tidak valid."
+    };
+  }
+
+  const referenceError = await validateActiveTopUpReferences(parsed.data.walletId, parsed.data.sourceAccountId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
     };
   }
 
@@ -322,6 +439,14 @@ export async function updateTopUpAction(
     };
   }
 
+  const referenceError = await validateActiveTopUpReferences(parsed.data.walletId, parsed.data.sourceAccountId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
+    };
+  }
+
   await prisma.transaction.update({
     where: {
       id: transaction.id
@@ -379,6 +504,14 @@ export async function createTransferAction(
   if (!transactionDate) {
     return {
       error: "Format tanggal tidak valid."
+    };
+  }
+
+  const referenceError = await validateActiveTransferWallets(parsed.data.fromWalletId, parsed.data.toWalletId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
     };
   }
 
@@ -461,6 +594,14 @@ export async function updateTransferAction(
   if (!transaction) {
     return {
       error: "Transfer tidak ditemukan atau sudah dihapus."
+    };
+  }
+
+  const referenceError = await validateActiveTransferWallets(parsed.data.fromWalletId, parsed.data.toWalletId);
+
+  if (referenceError) {
+    return {
+      error: referenceError
     };
   }
 

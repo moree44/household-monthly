@@ -3,11 +3,8 @@ import { ArrowDownLeft, ArrowLeft, ArrowRightLeft, ArrowUpRight } from "lucide-r
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { ExpenseForm } from "@/features/transactions/components/expense-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function NewExpensePage() {
   await requireUser();
@@ -85,7 +82,7 @@ export default async function NewExpensePage() {
           <ExpenseForm
             wallets={wallets}
             categories={categories}
-            defaultDate={formatDateInputValue(new Date())}
+            defaultDate={formatAppDateInputValue(new Date())}
           />
         </div>
 

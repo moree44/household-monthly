@@ -3,11 +3,8 @@ import { ArrowDownLeft, ArrowLeft, ArrowRightLeft, ArrowUpRight } from "lucide-r
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { TransferForm } from "@/features/transactions/components/transfer-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function NewTransferPage() {
   await requireUser();
@@ -68,7 +65,7 @@ export default async function NewTransferPage() {
         </nav>
 
         <div className="mt-3">
-          <TransferForm wallets={wallets} defaultDate={formatDateInputValue(new Date())} />
+          <TransferForm wallets={wallets} defaultDate={formatAppDateInputValue(new Date())} />
         </div>
 
         <BottomNav active="catat" />

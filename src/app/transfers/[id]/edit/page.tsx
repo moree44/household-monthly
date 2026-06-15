@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { TransferForm } from "@/features/transactions/components/transfer-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
 
 type EditTransferPageProps = {
@@ -11,10 +12,6 @@ type EditTransferPageProps = {
     id: string;
   }>;
 };
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function EditTransferPage({ params }: EditTransferPageProps) {
   await requireUser();
@@ -89,7 +86,7 @@ export default async function EditTransferPage({ params }: EditTransferPageProps
           <TransferForm
             mode="edit"
             wallets={wallets}
-            defaultDate={formatDateInputValue(transaction.transactionDate)}
+            defaultDate={formatAppDateInputValue(transaction.transactionDate)}
             initialValues={{
               transactionId: transaction.id,
               amount: transaction.amount.toString(),

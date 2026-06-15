@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { TopUpForm } from "@/features/transactions/components/top-up-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
 
 type EditTopUpPageProps = {
@@ -11,10 +12,6 @@ type EditTopUpPageProps = {
     id: string;
   }>;
 };
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function EditTopUpPage({ params }: EditTopUpPageProps) {
   await requireUser();
@@ -103,7 +100,7 @@ export default async function EditTopUpPage({ params }: EditTopUpPageProps) {
             mode="edit"
             wallets={wallets}
             sourceAccounts={sourceAccounts}
-            defaultDate={formatDateInputValue(transaction.transactionDate)}
+            defaultDate={formatAppDateInputValue(transaction.transactionDate)}
             initialValues={{
               transactionId: transaction.id,
               amount: transaction.amount.toString(),

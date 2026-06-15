@@ -4,18 +4,13 @@ import {
   ArrowUpRight,
   CircleUserRound,
   History,
-  Plus,
   Settings,
-  Tags,
-  ChevronLeft,
-  ChevronRight,
-  Wallet,
-  House,
-  Heart,
-  Shield
+  Tags
 } from "lucide-react";
 import Link from "next/link";
 import { BottomNav } from "@/components/navigation/bottom-nav";
+import { MonthNavigation } from "@/features/dashboard/components/month-navigation";
+import { WalletSection } from "@/features/dashboard/components/wallet-section";
 import { getDashboardData } from "@/features/dashboard/data";
 import { formatRupiah } from "@/lib/format/currency";
 import { requireUser } from "@/lib/auth/session";
@@ -26,14 +21,6 @@ type DashboardPageProps = {
   searchParams: Promise<{
     month?: string | string[];
   }>;
-};
-
-const walletIcon = {
-  operational: House,
-  wife: Heart,
-  home_setup: MoneyBagIcon,
-  emergency: Shield,
-  custom: Wallet
 };
 
 const quickActions = [
@@ -71,34 +58,12 @@ const transactionIconTone = {
   adjustment: "bg-amber-50 text-amber-700"
 };
 
-function MoneyBagIcon({ size = 17, strokeWidth = 1.9 }: { size?: number; strokeWidth?: number }) {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height={size}
-      viewBox="0 0 24 24"
-      width={size}
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={strokeWidth}
-    >
-      <path d="M9 3h6l-2 4h-2L9 3Z" />
-      <path d="M7.5 9.5C5.7 11.2 4.5 14 4.5 16.5C4.5 20 7.4 21 12 21s7.5-1 7.5-4.5c0-2.5-1.2-5.3-3-7" />
-      <path d="M8 8h8" />
-      <circle cx="12" cy="15" r="1.5" />
-    </svg>
-  );
-}
-
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const currentUser = await requireUser();
   const resolvedSearchParams = await searchParams;
   const month = getMonthContext(resolvedSearchParams.month);
   const dashboard = await getDashboardData(month);
 
-  const primaryWallets = dashboard.wallets.slice(0, 4);
   const topCategories = dashboard.categorySummaries.slice(0, 3);
   const wifeUsagePercent =
     dashboard.wifeSummary.transferIn > 0
@@ -132,26 +97,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </header>
 
-          <div className="mt-4 flex items-center justify-between rounded-[16px] bg-[#E5E5E5] p-1.5 shadow-sm">
-            <Link
-              href={withMonthParam("/dashboard", dashboard.previousMonthKey)}
-              className="grid h-9 w-9 place-items-center rounded-[12px] bg-[#F5F5F5] text-[#525252] transition hover:bg-[#D4D4D4]"
-              aria-label="Bulan sebelumnya"
-            >
-              <ChevronLeft size={18} strokeWidth={1.8} />
-            </Link>
-            <div className="text-center">
-              <p className="text-xs font-bold uppercase tracking-normal text-[#737373]">periode</p>
-              <p className="text-sm font-bold text-[#171717]">{dashboard.monthLabel}</p>
-            </div>
-            <Link
-              href={withMonthParam("/dashboard", dashboard.nextMonthKey)}
-              className="grid h-9 w-9 place-items-center rounded-[12px] bg-[#F5F5F5] text-[#525252] transition hover:bg-[#D4D4D4]"
-              aria-label="Bulan berikutnya"
-            >
-              <ChevronRight size={18} strokeWidth={1.8} />
-            </Link>
-          </div>
+          <MonthNavigation
+            label={dashboard.monthLabel}
+            previousHref={withMonthParam("/dashboard", dashboard.previousMonthKey)}
+            nextHref={withMonthParam("/dashboard", dashboard.nextMonthKey)}
+          />
 
           <section className="mt-5 rounded-[22px] bg-[#171717] p-5 text-white shadow-xl shadow-black/15">
             <div className="flex items-start justify-between gap-4">
@@ -183,57 +133,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </section>
 
-          <section className="mt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[#171717]">Wallet</h2>
-              <button
-                className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#262626] shadow-sm"
-                aria-label="Add wallet"
-              >
-                <Plus size={18} strokeWidth={1.8} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {primaryWallets.map((wallet, index) => {
-                const Icon = walletIcon[wallet.type] ?? Wallet;
-
-                return (
-                  <div
-                    key={wallet.id}
-                    className={cn(
-                      "min-h-[108px] rounded-[16px] p-4 shadow-sm",
-                      index === 0 ? "bg-[#262626] text-white" : "bg-[#E5E5E5] text-[#171717]"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-8 w-8 place-items-center rounded-[11px]",
-                        index === 0 ? "bg-[#404040] text-[#F5F5F5]" : "bg-[#D4D4D4] text-[#404040]"
-                      )}
-                    >
-                      <Icon size={17} strokeWidth={1.9} />
-                    </span>
-                    <p
-                      className={cn(
-                        "mt-3 text-xs font-semibold",
-                        index === 0 ? "text-[#D4D4D4]" : "text-[#737373]"
-                      )}
-                    >
-                      {wallet.name}
-                    </p>
-                    <p
-                      className={cn(
-                        "mt-2 text-xl font-semibold",
-                        index === 0 ? "text-white" : "text-[#171717]"
-                      )}
-                    >
-                      {formatRupiah(wallet.balance)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <WalletSection wallets={dashboard.wallets} />
 
           <section className="mt-5 rounded-[18px] bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">

@@ -3,11 +3,8 @@ import { ArrowDownLeft, ArrowLeft, ArrowRightLeft, ArrowUpRight } from "lucide-r
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { TopUpForm } from "@/features/transactions/components/top-up-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function NewTopUpPage() {
   await requireUser();
@@ -86,7 +83,7 @@ export default async function NewTopUpPage() {
           <TopUpForm
             wallets={wallets}
             sourceAccounts={sourceAccounts}
-            defaultDate={formatDateInputValue(new Date())}
+            defaultDate={formatAppDateInputValue(new Date())}
           />
         </div>
 

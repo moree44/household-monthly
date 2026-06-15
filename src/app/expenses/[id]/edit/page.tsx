@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { ExpenseForm } from "@/features/transactions/components/expense-form";
 import { requireUser } from "@/lib/auth/session";
+import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
 
 type EditExpensePageProps = {
@@ -11,10 +12,6 @@ type EditExpensePageProps = {
     id: string;
   }>;
 };
-
-function formatDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
 
 export default async function EditExpensePage({ params }: EditExpensePageProps) {
   await requireUser();
@@ -102,7 +99,7 @@ export default async function EditExpensePage({ params }: EditExpensePageProps) 
             mode="edit"
             wallets={wallets}
             categories={categories}
-            defaultDate={formatDateInputValue(transaction.transactionDate)}
+            defaultDate={formatAppDateInputValue(transaction.transactionDate)}
             initialValues={{
               transactionId: transaction.id,
               amount: transaction.amount.toString(),

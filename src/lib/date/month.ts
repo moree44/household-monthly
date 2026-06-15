@@ -1,3 +1,10 @@
+import {
+  formatAppDateInputValue,
+  formatAppMonthLabel,
+  getAppDateParts,
+  parseAppDateInput
+} from "@/lib/date/timezone";
+
 export type MonthContext = {
   key: string;
   label: string;
@@ -8,41 +15,55 @@ export type MonthContext = {
 };
 
 function formatMonthKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const { year, month } = getAppDateParts(date);
 
-  return `${year}-${month}`;
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function getMonthStart(year: number, month: number) {
+  const normalizedDate = new Date(Date.UTC(year, month - 1, 1));
+  const normalizedYear = normalizedDate.getUTCFullYear();
+  const normalizedMonth = String(normalizedDate.getUTCMonth() + 1).padStart(2, "0");
+
+  return parseAppDateInput(`${normalizedYear}-${normalizedMonth}-01`);
 }
 
 function parseMonthKey(value: string | string[] | undefined) {
   const rawValue = Array.isArray(value) ? value[0] : value;
 
   if (!rawValue || !/^\d{4}-\d{2}$/.test(rawValue)) {
-    return new Date();
+    return parseAppDateInput(`${formatAppDateInputValue(new Date()).slice(0, 7)}-01`);
   }
 
   const [year, month] = rawValue.split("-").map(Number);
 
   if (!year || !month || month < 1 || month > 12) {
-    return new Date();
+    return parseAppDateInput(`${formatAppDateInputValue(new Date()).slice(0, 7)}-01`);
   }
 
-  return new Date(year, month - 1, 1);
+  return getMonthStart(year, month);
 }
 
 export function getMonthContext(value?: string | string[]) {
-  const selectedDate = parseMonthKey(value);
-  const start = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-  const end = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
-  const previousDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
-  const nextDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
+  const selectedDate = parseMonthKey(value) ?? parseAppDateInput(`${formatAppDateInputValue(new Date()).slice(0, 7)}-01`);
+
+  if (!selectedDate) {
+    throw new Error("Failed to create month context.");
+  }
+
+  const { year, month } = getAppDateParts(selectedDate);
+  const start = selectedDate;
+  const end = getMonthStart(year, month + 1);
+  const previousDate = getMonthStart(year, month - 1);
+  const nextDate = end;
+
+  if (!end || !previousDate || !nextDate) {
+    throw new Error("Failed to create month boundaries.");
+  }
 
   return {
     key: formatMonthKey(start),
-    label: new Intl.DateTimeFormat("id-ID", {
-      month: "long",
-      year: "numeric"
-    }).format(start),
+    label: formatAppMonthLabel(start),
     start,
     end,
     previousKey: formatMonthKey(previousDate),
