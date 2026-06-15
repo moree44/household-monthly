@@ -33,6 +33,8 @@ Fitur utama yang sudah berjalan:
 - Vercel + Neon PostgreSQL production deployment
 - Route loading skeletons and optimized dashboard/history queries
 - Client-side History filters for status, type, and week within the selected month
+- WIB-consistent transaction date handling for local/Vercel parity
+- Dashboard wallet `View all` toggle for extra wallets such as `Dompet Suami`
 
 ## Local Setup
 
@@ -239,9 +241,12 @@ Production performance notes:
 
 - Vercel functions diarahkan ke Singapore.
 - Dashboard memakai grouped aggregate queries untuk saldo wallet.
+- Dashboard month selector prefetches adjacent months to reduce perceived delay.
+- Dashboard wallet section shows 4 wallets by default and can expand inline with `View all`.
 - History query mengambil data bulan sekali, lalu status/type/week filter diproses di browser.
 - Transaction indexes sudah ditambahkan untuk data jangka panjang.
-- Transaction save actions sudah dikurangi extra database round trip.
+- Transaction save actions validate active wallet/category/source account references server-side.
+- Transaction date parsing, month boundaries, History grouping, and form date defaults use WIB consistently.
 - Delay singkat setelah idle masih mungkin terjadi karena serverless cold start.
 
 Latest Lighthouse snapshot:

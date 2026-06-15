@@ -82,7 +82,10 @@ This adds indexes for Dashboard, History, wallet balance, and category/month que
 Latest app-side performance changes:
 
 - History filter chips run client-side inside the selected month.
-- Transaction create/edit actions use fewer database round trips.
+- Transaction create/edit actions validate active wallet/category/source account references server-side.
+- Transaction date parsing, month boundaries, form defaults, and History grouping use WIB (`Asia/Jakarta`) consistently.
+- Dashboard previous/next month navigation prefetches adjacent months to reduce perceived delay.
+- Dashboard wallet cards keep 4 cards by default and expand inline with `View all` / `Hide`.
 - Settings count queries use grouped counts instead of relation `_count` includes.
 - Delete/restore refreshes the current route after successful action.
 
@@ -121,11 +124,14 @@ Open production URL and test:
 - Create Transfer
 - Create Top Up
 - Edit transaction
+- Verify selected transaction date remains correct in WIB after create/edit
 - Delete transaction
 - Restore transaction
 - Check History active/deleted
 - Check History W1/W2/W3/W4 filters
 - Check History Expense/Top Up/Transfer filters
+- Check Dashboard previous/next month navigation
+- Check Dashboard wallet `View all` toggle if more than 4 wallets exist
 - Check mobile Add to Home Screen
 
 Optional production audit:

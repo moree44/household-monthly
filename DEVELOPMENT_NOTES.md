@@ -149,6 +149,7 @@ cloudflared tunnel --url http://localhost:3000
   - Dompet Istri
   - Tabungan Rumah
   - Dana Darurat
+  - extra wallets can be expanded inline with `View all`
 - Expense create/edit.
 - Transfer create/edit.
 - Top Up create/edit.
@@ -188,8 +189,12 @@ cloudflared tunnel --url http://localhost:3000
 - Route loading skeletons for smoother mobile navigation.
 - Transaction create/update/delete/restore revalidates Dashboard, History, and Profile views.
 - Dashboard data loading optimized with grouped aggregate queries.
+- Dashboard month navigation prefetches previous/next month routes and gives immediate pressed feedback.
+- Dashboard wallet cards show 4 wallets by default and expand inline with `View all` / `Hide`.
 - History data loading optimized to select only fields used by the UI.
 - Production database indexes for long-term transaction growth.
+- Transaction date handling is pinned to WIB (`Asia/Jakarta`) for parsing, form defaults, month ranges, and History grouping.
+- Transaction create/update validates active wallet/category/source account references server-side before writes.
 
 ## Important Product Decisions
 
@@ -348,7 +353,10 @@ Completed:
   - History status/type/week filters now run client-side, so W1/W2/W3/W4 and type chips do not round-trip to Vercel/Neon.
   - History URL is kept in sync with selected filters using `window.history.replaceState`.
   - Delete/restore buttons refresh the current route after a successful action so client-side History remains synced.
-  - Transaction create/edit actions were simplified to reduce extra validation lookups before writes.
+  - Transaction create/edit actions validate active wallet/category/source account references again server-side before writes.
+  - Transaction date parsing and display paths use a shared WIB helper so laptop WSL and Vercel produce the same date/month behavior.
+  - Dashboard previous/next month links are prefetched from a client component to reduce first-tap delay.
+  - Dashboard wallet cards keep the default 4-card layout, with inline `View all` expansion for additional wallets such as `Dompet Suami`.
   - Settings user/wallet/category counts were moved from relation `_count` includes to grouped count queries.
 
 Verification:
@@ -414,15 +422,17 @@ Interpretation:
    - create Expense
    - create Transfer
    - create Top Up
+   - verify transaction date stays on the selected WIB date in Dashboard and History
    - delete/restore
    - test History filters W1/W2/W3/W4 and type chips
+   - test Dashboard month previous/next links and wallet `View all` toggle
    - test iPhone Add to Home Screen from production URL
 5. Inspect Lighthouse Best Practices details and fix actionable warnings.
 6. Polish remaining PWA smoothness if needed:
    - smaller perceived delay after save
    - smoother cold-start messaging if needed
 7. Polish Profile/settings detail if needed.
-8. Add category/wallet icons later.
+8. Add category/wallet icon customization later.
 
 ## Cloud Database Status
 
@@ -435,7 +445,7 @@ Interpretation:
 - Seed completed with custom `SEED_SUAMI_PASSWORD` and `SEED_ISTRI_PASSWORD`.
 - Initial cloud data verified:
   - 2 users
-  - 4 wallets
+  - 4 initial wallets
   - 4 source accounts
   - 10 categories
   - 2 goals
@@ -453,6 +463,9 @@ Interpretation:
 - Production smoke test after every performance/deploy change.
 - Lighthouse Best Practices detail review.
 - Extra PWA smoothness polish if production still feels delayed after idle.
+- Role permission hardening: restrict wallet/category/source-account management to admin.
+- Login rate limiting/throttling for public production URL.
+- Monthly closing flow to move leftover operational balance into Tabungan Rumah.
 
 ## GitHub Handoff Plan
 

@@ -32,6 +32,9 @@ npm run build
 - [x] Login as `suami`.
 - [x] Dashboard opens.
 - [x] Month selector previous/next works.
+- [ ] Dashboard previous/next month first tap feels acceptable after adjacent prefetch.
+- [ ] Dashboard wallet section shows 4 cards by default.
+- [ ] Dashboard wallet `View all` expands extra wallets inline and `Hide` collapses back.
 - [x] Bottom navigation works:
   - [x] home
   - [x] history
@@ -47,6 +50,7 @@ npm run build
 - [x] Operational expense increases.
 - [x] Wallet balance decreases.
 - [x] Edit expense amount/category/wallet/note/date.
+- [ ] Expense date stays on the selected WIB date after save/edit.
 - [x] Dashboard and History reflect edited expense.
 - [x] Delete expense from History.
 - [x] Expense disappears from Active.
@@ -65,6 +69,7 @@ npm run build
 - [x] Destination wallet increases.
 - [x] Operational expense does not increase.
 - [x] Edit transfer amount/from/to/note/date.
+- [ ] Transfer date stays on the selected WIB date after save/edit.
 - [x] Dashboard and History reflect edited transfer.
 - [x] Delete transfer.
 - [x] Wallet balances exclude deleted transfer.
@@ -79,6 +84,7 @@ npm run build
 - [x] Destination wallet increases.
 - [x] Operational expense does not increase.
 - [x] Edit top up amount/source/wallet/note/date.
+- [ ] Top up date stays on the selected WIB date after save/edit.
 - [x] Dashboard and History reflect edited top up.
 - [x] Delete top up.
 - [x] Wallet balance excludes deleted top up.

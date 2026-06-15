@@ -517,6 +517,8 @@ Dashboard harus memberi gambaran kondisi bulan berjalan dalam kurang dari 3 deti
 - Dompet Istri
 - Tabungan Rumah
 - Dana Darurat
+- Default mobile view shows 4 wallet cards.
+- If more wallets exist, user can expand inline with `View all` and collapse with `Hide`.
 
 **Card 3 - Category Spending**
 
@@ -834,6 +836,10 @@ prisma/
 - Dashboard recent transaction icons
 - History deleted type filter fix
 - History delete/restore confirmation mobile overflow fix
+- Transaction date handling pinned to WIB across local/Vercel.
+- Server-side active reference validation for transaction create/update.
+- Dashboard previous/next month prefetch.
+- Dashboard wallet `View all` inline expansion for extra wallets.
 - Prepare private GitHub repo
 - Prepare Neon cloud database
 - Prepare Vercel deployment
@@ -871,7 +877,7 @@ Expected data scale is small:
 
 - 20 transactions per day for 5 years is about 36,500 transactions.
 - PostgreSQL can handle this comfortably.
-- Dashboard should query only the active month where possible.
+- Dashboard should query only the active month where possible, except wallet balances that intentionally need all-time balance until a monthly closing/snapshot flow exists.
 - History should use pagination.
 - Frequently filtered fields must be indexed.
 - Receipt upload and OCR are excluded from MVP to keep the app fast and simple.
@@ -880,11 +886,14 @@ Expected data scale is small:
 
 ## Current Open Items
 
-- Vercel project is not configured yet.
-- Production smoke test after Vercel deployment is not completed yet.
+- Vercel production deployment is configured and live.
+- Neon PostgreSQL is configured as shared cloud database for PC/laptop/Vercel.
+- Run production smoke test after each important deploy.
 - Confirm production user passwords are stored safely and not using old default `password123`.
-- Route transitions can be polished further after Vercel preview testing.
-- Neon PostgreSQL has been configured as shared cloud database for PC/laptop/Vercel.
+- Role permission hardening: restrict wallet/category/source-account management to admin.
+- Login rate limiting/throttling for public production URL.
+- Route transitions can be polished further if production still feels delayed after idle.
+- Monthly closing flow to move leftover operational balance to Tabungan Rumah.
 
 ---
 
@@ -900,3 +909,4 @@ Expected data scale is small:
 | 2.1 | Update implementasi: goals manual, UI mobile-first charcoal/gray, flat categories, history weekly filter, restore transaction, dan deployment handoff notes |
 | 2.2 | Tambah PWA/iOS Safari Add to Home Screen, safe-area handling, icon app, fix History Deleted type filter, fix confirm delete/restore mobile overflow, dan icon Recent Transactions |
 | 2.3 | Update status manual testing pass, Neon PostgreSQL configured, deployment docs, dan env example terbaru |
+| 2.4 | Tambah validasi active reference transaksi, helper tanggal WIB, prefetch month dashboard, dan wallet `View all` inline expansion |
