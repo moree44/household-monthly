@@ -104,18 +104,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           />
 
           <section className="mt-5 rounded-[22px] bg-[#171717] p-5 text-white shadow-xl shadow-black/15">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-normal text-[#A3A3A3]">
-                  total saldo
-                </p>
-                <p className="mt-2 text-4xl tracking-normal">
-                  {formatRupiah(dashboard.totalWalletBalance)}
-                </p>
-              </div>
-              <span className="rounded-full bg-[#404040] px-3 py-2 text-xs font-semibold text-[#D4D4D4]">
-                {dashboard.monthLabel}
-              </span>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-normal text-[#A3A3A3]">
+                total saldo
+              </p>
+              <p className="mt-2 text-4xl tracking-normal">
+                {formatRupiah(dashboard.totalWalletBalance)}
+              </p>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-[14px] bg-[#262626] px-4 py-3">
