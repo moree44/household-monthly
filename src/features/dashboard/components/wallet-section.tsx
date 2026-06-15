@@ -60,10 +60,10 @@ export function WalletSection({ wallets }: WalletSectionProps) {
           {hasHiddenWallets ? (
             <button
               type="button"
-              className="rounded-full bg-white px-3 py-2 text-xs font-bold text-blue-600 shadow-sm transition hover:bg-[#FAFAFA]"
+              className="rounded-full bg-white px-3.5 py-2 text-xs font-bold text-[#525252] shadow-sm transition hover:bg-[#FAFAFA]"
               onClick={() => setShowAll((current) => !current)}
             >
-              {showAll ? "sembunyikan" : "lihat semua"}
+              {showAll ? "Hide" : "View all"}
             </button>
           ) : null}
           <Link
