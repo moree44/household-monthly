@@ -456,6 +456,23 @@ Interpretation:
 - 2026-06-13: Full `TESTING_CHECKLIST.md` passed on PC WSL + Cloudflare Tunnel + iPhone/PWA.
 - Tested flows include Expense, Transfer, Top Up, edit, delete, restore, History filters, Goals, Profile/settings, and iPhone Add to Home Screen behavior.
 
+## 2026-10-12 Product Expansion
+
+Dua lapisan:
+
+- Harian: Catat expense/transfer/top up (keypad, ketik-saja AI, scan barcode).
+- Kekayaan: `/wealth` untuk ATM/bank, e-wallet, CEX crypto, dan aset (mobil/motor). Saldo diisi manual.
+
+AI Catat: kamus lokal gratisan untuk shortcut (`gorengan 5k` → Food & Drink). Kalimat lebih bebas memakai API OpenAI-compatible. Persona `agent.md`, kemampuan `skill.md`, kebiasaan `memory.md` di `src/features/transactions/`. Scan barcode memakai kamera + Open Food Facts, tanpa API key.
+
+PWA sekarang mendaftarkan `public/sw.js` (network-first shell).
+
+Chat AI (tombol bulat kanan bawah) bisa catat lewat obrolan dan jawab pengeluaran bulan ini. Draft ragu minta konfirmasi Simpan.
+
+Mode desktop hanya untuk website pointer halus (laptop/mouse). iPad Safari dan PWA tetap kerangka HP.
+
+Belum: live API Binance, OCR foto struk, IndexedDB outbox, monthly closing.
+
 ## Not Done Yet
 
 - Rotate Neon password and `AUTH_SECRET` because setup secrets were pasted/shared during development.
@@ -466,6 +483,8 @@ Interpretation:
 - Role permission hardening: restrict wallet/category/source-account management to admin.
 - Login rate limiting/throttling for public production URL.
 - Monthly closing flow to move leftover operational balance into Tabungan Rumah.
+- Live exchange/bank balance sync.
+- Receipt photo OCR.
 
 ## GitHub Handoff Plan
 

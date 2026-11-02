@@ -4,7 +4,7 @@ import type { WalletType } from "@prisma/client";
 import { Heart, House, Plus, Shield, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { formatRupiah } from "@/lib/format/currency";
+import { PrivateAmount } from "@/features/privacy/privacy";
 import { cn } from "@/lib/utils";
 
 type DashboardWallet = {
@@ -104,7 +104,7 @@ export function WalletSection({ wallets }: WalletSectionProps) {
                 {wallet.name}
               </p>
               <p className={cn("mt-2 text-xl font-semibold", index === 0 ? "text-white" : "text-[#171717]")}>
-                {formatRupiah(wallet.balance)}
+                <PrivateAmount value={wallet.balance} />
               </p>
             </div>
           );

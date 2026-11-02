@@ -80,6 +80,7 @@ export function TopUpForm({
           id="amount"
           name="amount"
           placeholder="5.000.000"
+          keypad={mode === "create"}
           defaultValue={initialValues?.amount}
           className="mt-1 h-10 border-0 bg-transparent px-0 text-2xl font-semibold text-white placeholder:text-[#737373] focus:border-transparent focus:ring-0"
           required

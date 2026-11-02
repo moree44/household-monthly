@@ -1,6 +1,7 @@
 import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { BottomNav } from "@/components/navigation/bottom-nav";
+import { PrivacySettingsCard } from "@/features/privacy/privacy";
 import { requireUser } from "@/lib/auth/session";
 
 const swatches = ["#171717", "#262626", "#404040", "#737373", "#A3A3A3", "#D4D4D4", "#E5E5E5", "#F5F5F5"];
@@ -10,7 +11,7 @@ export default async function AppearanceSettingsPage() {
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
-      <div className="mx-auto min-h-screen max-w-[430px] bg-[#F5F5F5] px-4 pb-6 pt-5 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px]">
+      <div className="app-canvas-mid mx-auto min-h-screen max-w-[430px] bg-[#F5F5F5] px-4 pb-6 pt-5 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px]">
         <header className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-normal text-[#737373]">profile</p>
@@ -49,6 +50,8 @@ export default async function AppearanceSettingsPage() {
             ))}
           </div>
         </section>
+
+        <PrivacySettingsCard />
 
         <section className="mt-5 rounded-[18px] bg-white p-4 shadow-sm">
           <p className="text-sm font-bold text-[#171717]">Status</p>

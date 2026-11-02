@@ -22,7 +22,7 @@ import {
   toggleGoalAction,
   updateGoalAction
 } from "@/features/goals/actions";
-import { formatRupiah } from "@/lib/format/currency";
+import { PrivateAmount } from "@/features/privacy/privacy";
 
 type GoalItem = {
   id: string;
@@ -143,7 +143,7 @@ function GoalProgress({ currentAmount, targetAmount }: { currentAmount: number; 
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-bold text-blue-600">{Math.round(progress)}%</p>
         <p className="text-[11px] font-semibold text-[#737373]">
-          sisa {formatRupiah(Math.max(targetAmount - currentAmount, 0))}
+          sisa <PrivateAmount value={Math.max(targetAmount - currentAmount, 0)} />
         </p>
       </div>
       <div className="mt-2 h-2 rounded-full bg-[#D4D4D4]">
@@ -152,11 +152,11 @@ function GoalProgress({ currentAmount, targetAmount }: { currentAmount: number; 
       <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] font-semibold text-[#737373]">
         <div>
           <p>terkumpul</p>
-          <p className="mt-1 text-sm font-bold text-[#171717]">{formatRupiah(currentAmount)}</p>
+          <p className="mt-1 text-sm font-bold text-[#171717]"><PrivateAmount value={currentAmount} /></p>
         </div>
         <div>
           <p>target</p>
-          <p className="mt-1 text-sm font-bold text-[#171717]">{formatRupiah(targetAmount)}</p>
+          <p className="mt-1 text-sm font-bold text-[#171717]"><PrivateAmount value={targetAmount} /></p>
         </div>
       </div>
     </div>
@@ -294,7 +294,7 @@ export function GoalManager({ goals }: GoalManagerProps) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-normal text-[#A3A3A3]">total dialokasikan</p>
-            <p className="mt-3 text-4xl font-medium">{formatRupiah(totalCurrentAmount)}</p>
+            <p className="mt-3 text-4xl font-medium"><PrivateAmount value={totalCurrentAmount} /></p>
           </div>
           <span className="rounded-full bg-[#404040] px-3 py-2 text-xs font-bold text-[#FAFAFA]">
             {Math.round(totalProgress)}%
@@ -304,7 +304,7 @@ export function GoalManager({ goals }: GoalManagerProps) {
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-[14px] bg-[#262626] px-3 py-3">
             <p className="text-xs font-semibold text-[#A3A3A3]">Target</p>
-            <p className="mt-1 text-sm font-bold text-[#FAFAFA]">{formatRupiah(totalTargetAmount)}</p>
+            <p className="mt-1 text-sm font-bold text-[#FAFAFA]"><PrivateAmount value={totalTargetAmount} /></p>
           </div>
           <div className="rounded-[14px] bg-[#262626] px-3 py-3">
             <p className="text-xs font-semibold text-[#A3A3A3]">Goal Aktif</p>

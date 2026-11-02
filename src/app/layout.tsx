@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { PrivacyProvider } from "@/features/privacy/privacy";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -38,9 +41,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" data-shell="web" suppressHydrationWarning>
       <body className={plusJakartaSans.variable} suppressHydrationWarning>
-        {children}
+        <Script id="display-mode" strategy="beforeInteractive">
+          {`(function(){try{var s=window.matchMedia("(display-mode: standalone)").matches||window.matchMedia("(display-mode: fullscreen)").matches||window.matchMedia("(display-mode: minimal-ui)").matches||window.navigator.standalone===true;document.documentElement.dataset.shell=s?"pwa":"web";}catch(e){document.documentElement.dataset.shell="web";}})();`}
+        </Script>
+        <PrivacyProvider>
+          {children}
+        </PrivacyProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

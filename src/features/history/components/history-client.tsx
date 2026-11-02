@@ -15,7 +15,7 @@ import {
 import { BottomNav } from "@/components/navigation/bottom-nav";
 import { DeleteTransactionButton } from "@/features/transactions/components/delete-transaction-button";
 import { RestoreTransactionButton } from "@/features/transactions/components/restore-transaction-button";
-import { formatRupiah } from "@/lib/format/currency";
+import { PrivateAmount } from "@/features/privacy/privacy";
 import { withMonthParam } from "@/lib/date/month";
 import { cn } from "@/lib/utils";
 import type {
@@ -396,7 +396,7 @@ export function HistoryClient({ history }: HistoryClientProps) {
                               transaction.amount > 0 ? "text-blue-600" : "text-[#171717]"
                             )}
                           >
-                            {formatRupiah(transaction.amount)}
+                            <PrivateAmount value={transaction.amount} />
                           </p>
                           {statusFilter === "active" ? (
                             <div className="flex items-center gap-2">

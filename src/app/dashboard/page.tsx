@@ -4,6 +4,8 @@ import {
   ArrowUpRight,
   CircleUserRound,
   History,
+  Landmark,
+  MessageCircle,
   Settings,
   Tags
 } from "lucide-react";
@@ -12,7 +14,7 @@ import { BottomNav } from "@/components/navigation/bottom-nav";
 import { MonthNavigation } from "@/features/dashboard/components/month-navigation";
 import { WalletSection } from "@/features/dashboard/components/wallet-section";
 import { getDashboardData } from "@/features/dashboard/data";
-import { formatRupiah } from "@/lib/format/currency";
+import { PrivacyToggle, PrivateAmount } from "@/features/privacy/privacy";
 import { requireUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import { getMonthContext, withMonthParam } from "@/lib/date/month";
@@ -40,6 +42,12 @@ const quickActions = [
     href: "/top-ups/new",
     label: "Top Up",
     icon: ArrowDownLeft,
+    variant: "secondary"
+  },
+  {
+    href: "/expenses/new?mode=chat",
+    label: "Chat AI",
+    icon: MessageCircle,
     variant: "secondary"
   }
 ];
@@ -72,14 +80,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
-      <div className="mx-auto min-h-screen max-w-6xl bg-[#F5F5F5] px-4 pb-6 pt-6 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px] sm:p-6 lg:grid lg:grid-cols-[400px_1fr] lg:gap-6 lg:rounded-[24px]">
-        <section className="mx-auto w-full max-w-[430px] pb-3 lg:mx-0 lg:max-w-none lg:pb-0">
+      <div className="app-canvas mx-auto min-h-screen max-w-6xl bg-[#F5F5F5] px-4 pb-6 pt-6 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px] sm:p-6 desktop:grid desktop:grid-cols-[400px_1fr] desktop:gap-6 desktop:rounded-[24px]">
+        <section className="mx-auto w-full max-w-[430px] pb-3 tablet:max-w-none desktop:mx-0 desktop:max-w-none desktop:pb-0">
           <header className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium text-[#737373]">Halo, {currentUser.displayName}</p>
               <h1 className="text-xl font-bold tracking-normal text-[#0A0A0A]">Household Monthly</h1>
             </div>
             <div className="flex items-center gap-2">
+              <PrivacyToggle />
               <Link
                 href={withMonthParam("/history", dashboard.monthKey)}
                 className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#262626] shadow-sm transition hover:bg-[#FAFAFA]"
@@ -109,26 +118,40 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 total saldo
               </p>
               <p className="mt-2 text-4xl tracking-normal">
-                {formatRupiah(dashboard.totalWalletBalance)}
+                <PrivateAmount value={dashboard.totalWalletBalance} />
               </p>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-[14px] bg-[#262626] px-4 py-3">
                 <p className="text-xs font-medium text-[#A3A3A3]">Pengeluaran</p>
                 <p className="mt-1 text-base font-semibold text-white">
-                  {formatRupiah(dashboard.operationalExpense)}
+                  <PrivateAmount value={dashboard.operationalExpense} />
                 </p>
               </div>
               <div className="rounded-[14px] bg-[#262626] px-4 py-3">
                 <p className="text-xs font-medium text-[#A3A3A3]">Top Up</p>
                 <p className="mt-1 text-base font-semibold text-white">
-                  {formatRupiah(dashboard.monthlyTopUp)}
+                  <PrivateAmount value={dashboard.monthlyTopUp} />
                 </p>
               </div>
             </div>
           </section>
 
           <WalletSection wallets={dashboard.wallets} />
+
+          <Link
+            href="/wealth"
+            className="mt-5 flex items-center justify-between rounded-[18px] bg-white px-4 py-3 shadow-sm"
+          >
+            <span>
+              <span className="flex items-center gap-2 text-sm font-bold text-[#171717]">
+                <Landmark size={16} strokeWidth={1.8} />
+                Semua keuangan
+              </span>
+              <span className="mt-1 block text-xs text-[#737373]">ATM, Binance, mobil, motor</span>
+            </span>
+            <span className="text-xs font-bold text-blue-600">Buka</span>
+          </Link>
 
           <section className="mt-5 rounded-[18px] bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
@@ -152,25 +175,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <div>
                 <p className="text-[#737373]">terpakai</p>
                 <p className="mt-1 text-sm text-[#171717]">
-                  {formatRupiah(dashboard.wifeSummary.expense)}
+                  <PrivateAmount value={dashboard.wifeSummary.expense} />
                 </p>
               </div>
               <div>
                 <p className="text-[#737373]">saldo</p>
                 <p className="mt-1 text-sm text-[#171717]">
-                  {formatRupiah(dashboard.wifeSummary.balance)}
+                  <PrivateAmount value={dashboard.wifeSummary.balance} />
                 </p>
               </div>
               <div>
                 <p className="text-[#737373]">masuk</p>
                 <p className="mt-1 text-sm text-[#171717]">
-                  {formatRupiah(dashboard.wifeSummary.transferIn)}
+                  <PrivateAmount value={dashboard.wifeSummary.transferIn} />
                 </p>
               </div>
             </div>
           </section>
 
-          <section className="mt-5 lg:mb-0">
+          <section className="mt-5 desktop:mb-0">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-[#171717]">Transaksi Terbaru</h2>
               <Link href="/history" className="text-xs font-semibold text-blue-600">
@@ -208,7 +231,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                             transaction.type === "top_up" ? "text-blue-600" : "text-[#171717]"
                           )}
                         >
-                          {formatRupiah(transaction.amount)}
+                          <PrivateAmount value={transaction.amount} />
                         </p>
                       </div>
                     );
@@ -223,7 +246,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <BottomNav active="home" monthKey={dashboard.monthKey} />
         </section>
 
-        <aside className="hidden min-w-0 grid-cols-2 content-start gap-4 lg:grid">
+        <aside className="hidden min-w-0 grid-cols-2 content-start gap-4 desktop:grid">
           <section className="rounded-[22px] bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -242,8 +265,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     className={cn(
                       "flex h-12 items-center justify-center gap-2 rounded-[14px] text-sm font-bold shadow-sm transition",
                       action.variant === "primary"
-                        ? "bg-[#171717] text-white hover:bg-[#262626]"
-                        : "bg-white text-[#171717] hover:bg-[#FAFAFA]"
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                        : "bg-[#F5F5F5] text-[#171717] hover:bg-[#E5E5E5]"
                     )}
                   >
                     <Icon size={18} strokeWidth={1.8} />
@@ -269,7 +292,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                       <span className="font-bold text-[#262626]">{category.name}</span>
                       <span className="text-sm text-[#171717]">
-                        {formatRupiah(category.amount)}
+                        <PrivateAmount value={category.amount} />
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-[#D4D4D4]">
@@ -295,11 +318,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           <section className="col-span-2 rounded-[22px] bg-[#171717] p-5 text-white shadow-sm">
             <p className="text-sm font-semibold text-[#A3A3A3]">pengeluaran operasional</p>
-            <p className="mt-2 text-4xl">{formatRupiah(dashboard.operationalExpense)}</p>
+            <p className="mt-2 text-4xl"><PrivateAmount value={dashboard.operationalExpense} /></p>
             <div className="mt-5 grid grid-cols-3 gap-3">
               <div className="rounded-[16px] bg-[#262626] p-4">
                 <p className="text-xs text-[#A3A3A3]">Tabungan Rumah</p>
-                <p className="mt-2 text-lg">{formatRupiah(dashboard.homeSetupExpense)}</p>
+                <p className="mt-2 text-lg"><PrivateAmount value={dashboard.homeSetupExpense} /></p>
               </div>
               <div className="rounded-[16px] bg-[#262626] p-4">
                 <p className="text-xs text-[#A3A3A3]">Wallet</p>
