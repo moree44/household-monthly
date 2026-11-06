@@ -163,6 +163,80 @@ export async function getTransactionMatchById(id: string): Promise<TransactionMa
   return row ? { id: row.id, label: transactionLabel(row) } : null;
 }
 
+// Semua transaksi sepanjang waktu yang menyentuh wallet-wallet ini
+// (sebagai wallet tujuan, asal transfer, atau tujuan transfer).
+export async function findWalletTransactions(walletIds: string[], take: number): Promise<TransactionMatchSummary> {
+  const where = {
+    deletedAt: null,
+    OR: [
+      { walletId: { in: walletIds } },
+      { fromWalletId: { in: walletIds } },
+      { toWalletId: { in: walletIds } }
+    ]
+  };
+
+  const [rows, aggregate] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+      take,
+      select: {
+        id: true,
+        type: true,
+        description: true,
+        amount: true,
+        transactionDate: true,
+        category: { select: { name: true } },
+        wallet: { select: { name: true } },
+        fromWallet: { select: { name: true } },
+        toWallet: { select: { name: true } },
+        sourceAccount: { select: { name: true } }
+      }
+    }),
+    prisma.transaction.aggregate({
+      where,
+      _count: { id: true },
+      _sum: { amount: true }
+    })
+  ]);
+
+  return {
+    rows: rows.map((row) => ({ id: row.id, label: transactionLabel(row) })),
+    totalCount: aggregate._count.id,
+    totalAmount: decimalToNumber(aggregate._sum?.amount)
+  };
+}
+
+// Reset wallet: soft-delete semua transaksi yang menyentuh wallet + nol-kan
+// saldo awal, supaya saldo wallet kembali ke Rp 0.
+export async function resetWallets(userId: string, walletIds: string[]): Promise<number> {
+  const result = await prisma.transaction.updateMany({
+    where: {
+      deletedAt: null,
+      OR: [
+        { walletId: { in: walletIds } },
+        { fromWalletId: { in: walletIds } },
+        { toWalletId: { in: walletIds } }
+      ]
+    },
+    data: {
+      deletedAt: new Date(),
+      deletedById: userId,
+      updatedById: userId
+    }
+  });
+
+  await prisma.wallet.updateMany({
+    where: { id: { in: walletIds } },
+    data: { initialBalance: 0 }
+  });
+
+  revalidateTransactionViews();
+  revalidateWalletViews();
+
+  return result.count;
+}
+
 export async function softDeleteTransactions(userId: string, transactionIds: string[]) {
   const result = await prisma.transaction.updateMany({
     where: {

@@ -56,6 +56,7 @@ export type ParsedCatatDraft = {
   initialBalance: string | null;
   deleteTerm: string | null;
   deleteBulk: boolean;
+  deleteWalletNames: string[] | null;
   editTerm: string | null;
   editAmount: string | null;
   editCategoryName: string | null;
@@ -86,6 +87,7 @@ function emptyParsed(): ParsedCatatDraft {
     initialBalance: null,
     deleteTerm: null,
     deleteBulk: false,
+    deleteWalletNames: null,
     editTerm: null,
     editAmount: null,
     editCategoryName: null,
@@ -344,6 +346,12 @@ export async function resolveCatatDraft(input: {
             initialBalance: remoteDigits(remote.initialBalance),
             deleteTerm: remoteString(remote.deleteTerm, 80),
             deleteBulk: remote.deleteBulk === true,
+            deleteWalletNames: Array.isArray(remote.deleteWalletNames)
+              ? remote.deleteWalletNames
+                  .filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+                  .slice(0, 3)
+                  .map((name) => name.trim().slice(0, 60))
+              : null,
             editTerm: remoteString(remote.editTerm, 80),
             editAmount: remoteDigits(editChanges.amount),
             editCategoryName: remoteString(editChanges.categoryName, 60),

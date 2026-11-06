@@ -43,6 +43,8 @@ function confirmLabel(pending: ChatPendingAction) {
       return "Ya, buat";
     case "deactivate_wallet":
       return "Ya, nonaktifkan";
+    case "reset_wallets":
+      return "Ya, bersihkan";
   }
 }
 

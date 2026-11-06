@@ -38,7 +38,9 @@ import {
   createChatWallet,
   deactivateChatWallet,
   findTransactionMatches,
+  findWalletTransactions,
   getTransactionMatchById,
+  resetWallets,
   saveTopUpDraft,
   saveTransferDraft,
   softDeleteTransactions,
@@ -85,7 +87,13 @@ export type ChatPendingAction =
       changes: TransactionEditChanges;
     }
   | { kind: "create_wallet"; name: string; initialBalance: string | null }
-  | { kind: "deactivate_wallet"; walletId: string; name: string };
+  | { kind: "deactivate_wallet"; walletId: string; name: string }
+  | {
+      kind: "reset_wallets";
+      walletIds: string[];
+      walletNames: string[];
+      requirePhrase: string;
+    };
 
 export type ChatChoiceKind =
   | "category"
@@ -430,15 +438,55 @@ async function routeWalletCommand(command: WalletCommand, options: CatatOptions)
   };
 }
 
-async function routeDeleteCommand(command: DeleteCommand): Promise<GateOutcome> {
+async function routeDeleteCommand(
+  command: DeleteCommand,
+  options: CatatOptions,
+  rawText?: string,
+  aiWalletNames?: string[] | null
+): Promise<GateOutcome> {
   const currentMonth = getMonthContext();
   const month = command.lastMonth ? getMonthContext(currentMonth.previousKey) : currentMonth;
 
   if (!command.term && !command.amountDigits) {
+    // "bersihkan kas rumah tangga dan dompet istri" = reset wallet:
+    // hapus semua transaksi yang menyentuh wallet itu (all-time) + nol-kan saldo awal.
+    const mentionedWallets = options.wallets.filter((wallet) => {
+      const name = wallet.name.toLowerCase();
+
+      return (
+        Boolean(rawText?.includes(name)) ||
+        Boolean(
+          aiWalletNames?.some((candidate) => {
+            const needle = candidate.toLowerCase();
+            return needle.includes(name) || name.includes(needle);
+          })
+        )
+      );
+    });
+
+    if (command.bulk && mentionedWallets.length > 0) {
+      const walletNames = mentionedWallets.map((wallet) => wallet.name);
+      const summary = await findWalletTransactions(
+        mentionedWallets.map((wallet) => wallet.id),
+        5
+      );
+
+      return gateMatched({
+        reply: `Ini menghapus SEMUA ${summary.totalCount} transaksi yang menyentuh ${walletNames.join(" & ")} sepanjang waktu (total ${formatRupiah(summary.totalAmount)}) DAN mengosongkan saldo awalnya jadi Rp 0. Ketik "ya bersihkan" buat lanjut.`,
+        pendingAction: {
+          kind: "reset_wallets",
+          walletIds: mentionedWallets.map((wallet) => wallet.id),
+          walletNames,
+          requirePhrase: "ya bersihkan"
+        },
+        choices: []
+      });
+    }
+
     if (!command.bulk) {
       return gateMatched(
         emptyChat(
-          "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin semuanya: hapus semua transaksi bulan ini."
+          "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin semuanya: hapus semua transaksi bulan ini. Atau reset wallet: bersihkan dompet istri."
         )
       );
     }
@@ -446,7 +494,11 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<GateOutcome> 
     const all = await findTransactionMatches({ term: null, amountDigits: null, month, take: BULK_DELETE_LIMIT });
 
     if (all.totalCount === 0) {
-      return gateMatched(emptyChat(`Sudah bersih, ga ada transaksi di ${month.label}.`));
+      return gateMatched(
+        emptyChat(
+          `Sudah bersih, ga ada transaksi di ${month.label}. Kalau maksudnya reset saldo wallet, sebut namanya: bersihkan kas rumah tangga.`
+        )
+      );
     }
 
     if (all.totalCount > BULK_DELETE_LIMIT) {
@@ -792,13 +844,18 @@ async function routeParsedDraft(
 
   if (parsed.intent === "delete_transaction") {
     return (
-      await routeDeleteCommand({
-        term: parsed.deleteTerm,
-        bulk: parsed.deleteBulk,
-        lastOnly: false,
-        lastMonth: false,
-        amountDigits: digitsOnly(parsed.amount)
-      })
+      await routeDeleteCommand(
+        {
+          term: parsed.deleteTerm,
+          bulk: parsed.deleteBulk,
+          lastOnly: false,
+          lastMonth: false,
+          amountDigits: digitsOnly(parsed.amount)
+        },
+        options,
+        undefined,
+        parsed.deleteWalletNames
+      )
     ).response;
   }
 
@@ -1094,6 +1151,25 @@ async function executePendingAction(
         ? { reply: result.error, pendingAction: pending, choices: [] }
         : { reply: result.message, pendingAction: null, choices: [] };
     }
+    case "reset_wallets": {
+      const normalized = text.toLowerCase().replace(/[.,!?]/g, " ").replace(/\s+/g, " ").trim();
+
+      if (!/^(ya|y)[,\s]*(bersihkan|bersihin)$/.test(normalized)) {
+        return {
+          reply: `Konfirmasinya kurang pas. Ketik persis "ya bersihkan" buat menghapus ${pending.walletNames.join(" & ")}, atau "batal".`,
+          pendingAction: pending,
+          choices: []
+        };
+      }
+
+      const count = await resetWallets(userId, pending.walletIds);
+
+      return {
+        reply: `Beres. ${count} transaksi terhapus (masih bisa dipulihkan dari History → Terhapus) dan saldo awal ${pending.walletNames.join(" & ")} di-nol-kan.`,
+        pendingAction: null,
+        choices: []
+      };
+    }
   }
 }
 
@@ -1142,7 +1218,7 @@ async function routeNewIntent(
   const deleteCommand = parseDeleteCommand(lower);
 
   if (deleteCommand) {
-    const outcome = await routeDeleteCommand(deleteCommand);
+    const outcome = await routeDeleteCommand(deleteCommand, options, lower);
 
     if (outcome.matched) {
       return outcome.response;
