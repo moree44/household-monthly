@@ -75,7 +75,7 @@ export function WalletSection({ wallets }: WalletSectionProps) {
           </Link>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 wide:grid-cols-4">
         {visibleWallets.map((wallet, index) => {
           const Icon = walletIcon[wallet.type] ?? Wallet;
 

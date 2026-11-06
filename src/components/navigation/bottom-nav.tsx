@@ -1,6 +1,7 @@
 import { CircleUserRound, History, Home, Plus, Target } from "lucide-react";
 import Link from "next/link";
 import { DesktopSidebar } from "@/components/navigation/desktop-sidebar";
+import { ChatDock } from "@/features/transactions/components/chat-dock";
 import { cn } from "@/lib/utils";
 import { withMonthParam } from "@/lib/date/month";
 
@@ -28,8 +29,9 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
   return (
     <>
       <DesktopSidebar />
-      <div className="h-[calc(8.75rem+env(safe-area-inset-bottom,0px))] desktop:hidden" />
-      <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 text-[11px] font-semibold shadow-xl shadow-black/20 desktop:hidden">
+      <ChatDock />
+      <div className="h-[calc(8.75rem+env(safe-area-inset-bottom,0px))] wide:hidden" />
+      <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 text-[11px] font-semibold shadow-xl shadow-black/20 wide:hidden">
         <div className="grid h-full grid-cols-5 items-end">
           <Link href={dashboardHref} prefetch className={itemClass("home")} style={itemStyle("home")}>
             <Home size={18} strokeWidth={1.8} />

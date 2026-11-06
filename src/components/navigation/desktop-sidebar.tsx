@@ -5,6 +5,7 @@ import {
   History,
   Home,
   Landmark,
+  MessageCircle,
   Plus,
   Target
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", match: "/dashboard", label: "Home", icon: Home },
   { href: "/history", match: "/history", label: "History", icon: History },
+  { href: "/chat", match: "/chat", label: "Chat AI", icon: MessageCircle },
   { href: "/goals", match: "/goals", label: "Goals", icon: Target },
   { href: "/wealth", match: "/wealth", label: "Kekayaan", icon: Landmark },
   { href: "/profile", match: "/profile", label: "Profil", icon: CircleUserRound }
@@ -38,7 +40,7 @@ export function DesktopSidebar() {
     pathname.startsWith("/expenses") || pathname.startsWith("/transfers") || pathname.startsWith("/top-ups");
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#171717] px-4 py-6 text-white desktop:flex">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col bg-[#171717] px-4 py-6 text-white wide:flex">
       <div className="px-2">
         <p className="text-[11px] font-bold uppercase tracking-wide text-[#A3A3A3]">Household</p>
         <p className="mt-1 text-lg font-bold">Monthly</p>
@@ -78,8 +80,6 @@ export function DesktopSidebar() {
           );
         })}
       </nav>
-
-      <p className="mt-auto px-2 text-[11px] font-medium text-[#737373]">Website desktop</p>
     </aside>
   );
 }

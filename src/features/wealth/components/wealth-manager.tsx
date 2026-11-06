@@ -23,17 +23,9 @@ type WealthManagerProps = {
 const emptyState: WealthFormState = { error: null, success: null };
 
 const holdingKinds = [
-  { value: "bank", label: "Bank / ATM" },
-  { value: "ewallet", label: "E-wallet" },
-  { value: "crypto", label: "Crypto / CEX" },
-  { value: "cash", label: "Tunai lain" },
-  { value: "other", label: "Lainnya" }
-] as const;
-
-const assetKinds = [
-  { value: "vehicle", label: "Kendaraan" },
-  { value: "property", label: "Properti" },
-  { value: "other", label: "Lainnya" }
+  { value: "bank", label: "ATM" },
+  { value: "ewallet", label: "E-Wallet" },
+  { value: "crypto", label: "Crypto" }
 ] as const;
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
@@ -71,16 +63,11 @@ function HoldingRow({ holding }: { holding: WealthHolding }) {
 
   return (
     <article className={`rounded-[16px] bg-white p-3 shadow-sm ${holding.isActive ? "" : "opacity-60"}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-bold text-[#171717]">{holding.name}</p>
-          <p className="mt-0.5 text-[11px] font-medium text-[#737373]">
-            {holdingKinds.find((kind) => kind.value === holding.kind)?.label}
-            {holding.institution ? ` · ${holding.institution}` : ""}
-            {holding.visibility === "private" ? " · pribadi" : ""}
-          </p>
-        </div>
-        <p className="text-sm font-bold text-[#171717]"><PrivateAmount value={holding.idrValue} /></p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-[#171717]">{holding.name}</p>
+        <p className="text-sm font-bold text-[#171717]">
+          <PrivateAmount value={holding.idrValue} />
+        </p>
       </div>
       <form action={action} className="mt-2 grid gap-1.5">
         <input type="hidden" name="holdingId" value={holding.id} />
@@ -88,7 +75,7 @@ function HoldingRow({ holding }: { holding: WealthHolding }) {
           <input
             name="quantity"
             defaultValue={holding.quantity ?? ""}
-            placeholder="qty, mis. 0.02"
+            placeholder="Qty"
             className="h-9 rounded-[11px] bg-[#F5F5F5] px-2 text-xs font-semibold outline-none"
           />
         ) : (
@@ -119,15 +106,11 @@ function AssetRow({ asset }: { asset: WealthAsset }) {
 
   return (
     <article className={`rounded-[16px] bg-white p-3 shadow-sm ${asset.isActive ? "" : "opacity-60"}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-bold text-[#171717]">{asset.name}</p>
-          <p className="mt-0.5 text-[11px] font-medium text-[#737373]">
-            {assetKinds.find((kind) => kind.value === asset.kind)?.label}
-            {asset.visibility === "private" ? " · pribadi" : ""}
-          </p>
-        </div>
-        <p className="text-sm font-bold text-[#171717]"><PrivateAmount value={asset.idrValue} /></p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-[#171717]">{asset.name}</p>
+        <p className="text-sm font-bold text-[#171717]">
+          <PrivateAmount value={asset.idrValue} />
+        </p>
       </div>
       <form action={action} className="mt-2 flex gap-1.5">
         <input type="hidden" name="assetId" value={asset.id} />
@@ -149,81 +132,112 @@ function AssetRow({ asset }: { asset: WealthAsset }) {
   );
 }
 
+function HoldingList({
+  title,
+  items,
+  empty
+}: {
+  title: string;
+  items: WealthHolding[];
+  empty: string;
+}) {
+  return (
+    <section>
+      <h2 className="text-sm font-bold text-[#171717]">{title}</h2>
+      <div className="mt-3 grid gap-2">
+        {items.length === 0 ? (
+          <p className="rounded-[16px] bg-white px-3 py-4 text-sm text-[#737373]">{empty}</p>
+        ) : (
+          items.map((holding) => <HoldingRow key={holding.id} holding={holding} />)
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function WealthManager({ holdings, assets }: WealthManagerProps) {
   const [holdingState, holdingAction] = useActionState(createHoldingAction, emptyState);
   const [assetState, assetAction] = useActionState(createAssetAction, emptyState);
 
-  return (
-    <div className="grid gap-5 desktop:grid-cols-2">
-      <section>
-        <h2 className="text-sm font-bold text-[#171717]">Bank, e-wallet, crypto</h2>
-        <p className="mt-1 text-xs text-[#737373]">Saldo diisi manual. Update kapan sempat, bukan setiap hari.</p>
-        <form action={holdingAction} className="mt-3 grid gap-2 rounded-[16px] bg-[#E5E5E5] p-3">
-          <input name="name" placeholder="ATM BCA / Binance" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" required />
-          <div className="grid grid-cols-2 gap-2">
-            <select name="kind" defaultValue="bank" className="h-10 rounded-[12px] bg-white px-2 text-sm font-semibold">
-              {holdingKinds.map((kind) => (
-                <option key={kind.value} value={kind.value}>
-                  {kind.label}
-                </option>
-              ))}
-            </select>
-            <input name="institution" placeholder="BCA / Binance" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input name="idrValue" placeholder="Saldo Rp" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" required />
-            <input name="quantity" placeholder="Qty crypto (opsional)" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" />
-          </div>
-          <select name="visibility" defaultValue="household" className="h-10 rounded-[12px] bg-white px-2 text-sm font-semibold">
-            <option value="household">Rumah tangga</option>
-            <option value="private">Pribadi</option>
-          </select>
-          <SubmitButton>
-            <Plus size={14} strokeWidth={2} />
-            Tambah akun
-          </SubmitButton>
-          <Feedback state={holdingState} />
-        </form>
-        <div className="mt-3 grid gap-2">
-          {holdings.length === 0 ? (
-            <p className="rounded-[16px] bg-white px-3 py-4 text-sm text-[#737373]">Belum ada akun. Tambah ATM atau Binance di atas.</p>
-          ) : (
-            holdings.map((holding) => <HoldingRow key={holding.id} holding={holding} />)
-          )}
-        </div>
-      </section>
+  const atmHoldings = holdings.filter((holding) => holding.kind === "bank" || holding.kind === "cash" || holding.kind === "other");
+  const ewalletHoldings = holdings.filter((holding) => holding.kind === "ewallet");
+  const cryptoHoldings = holdings.filter((holding) => holding.kind === "crypto");
 
-      <section>
-        <h2 className="text-sm font-bold text-[#171717]">Aset</h2>
-        <p className="mt-1 text-xs text-[#737373]">Mobil, motor, atau aset lain. Pakai perkiraan nilai jual.</p>
-        <form action={assetAction} className="mt-3 grid gap-2 rounded-[16px] bg-[#E5E5E5] p-3">
-          <input name="name" placeholder="Motor NMAX / Mobil Avanza" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" required />
-          <select name="kind" defaultValue="vehicle" className="h-10 rounded-[12px] bg-white px-2 text-sm font-semibold">
-            {assetKinds.map((kind) => (
+  return (
+    <div className="grid gap-6 wide:grid-cols-2">
+      <div className="grid gap-6">
+        <HoldingList title="ATM" items={atmHoldings} empty="Belum ada ATM." />
+        <HoldingList title="E-Wallet" items={ewalletHoldings} empty="Belum ada E-Wallet." />
+      </div>
+
+      <div className="grid gap-6">
+        <HoldingList title="Crypto" items={cryptoHoldings} empty="Belum ada Crypto." />
+
+        <section>
+          <h2 className="text-sm font-bold text-[#171717]">Aset</h2>
+          <div className="mt-3 grid gap-2">
+            {assets.length === 0 ? (
+              <p className="rounded-[16px] bg-white px-3 py-4 text-sm text-[#737373]">Belum ada aset.</p>
+            ) : (
+              assets.map((asset) => <AssetRow key={asset.id} asset={asset} />)
+            )}
+          </div>
+        </section>
+      </div>
+
+      <form action={holdingAction} className="grid gap-2 rounded-[16px] bg-white p-3 shadow-sm">
+        <p className="text-sm font-bold text-[#171717]">Tambah akun</p>
+        <input
+          name="name"
+          placeholder="Nama"
+          className="h-10 rounded-[12px] bg-[#F5F5F5] px-3 text-sm font-semibold outline-none"
+          required
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <select name="kind" defaultValue="bank" className="h-10 rounded-[12px] bg-[#F5F5F5] px-2 text-sm font-semibold">
+            {holdingKinds.map((kind) => (
               <option key={kind.value} value={kind.value}>
                 {kind.label}
               </option>
             ))}
           </select>
-          <input name="idrValue" placeholder="Perkiraan nilai Rp" className="h-10 rounded-[12px] bg-white px-3 text-sm font-semibold outline-none" required />
-          <select name="visibility" defaultValue="household" className="h-10 rounded-[12px] bg-white px-2 text-sm font-semibold">
-            <option value="household">Rumah tangga</option>
-            <option value="private">Pribadi</option>
-          </select>
-          <SubmitButton>
-            <Plus size={14} strokeWidth={2} />
-            Tambah aset
-          </SubmitButton>
-          <Feedback state={assetState} />
-        </form>
-        <div className="mt-3 grid gap-2">
-          {assets.length === 0 ? (
-            <p className="rounded-[16px] bg-white px-3 py-4 text-sm text-[#737373]">Belum ada aset.</p>
-          ) : (
-            assets.map((asset) => <AssetRow key={asset.id} asset={asset} />)
-          )}
+          <input
+            name="idrValue"
+            placeholder="Saldo"
+            className="h-10 rounded-[12px] bg-[#F5F5F5] px-3 text-sm font-semibold outline-none"
+            required
+          />
         </div>
-      </section>
+        <input type="hidden" name="visibility" value="household" />
+        <SubmitButton>
+          <Plus size={14} strokeWidth={2} />
+          Simpan
+        </SubmitButton>
+        <Feedback state={holdingState} />
+      </form>
+
+      <form action={assetAction} className="grid gap-2 rounded-[16px] bg-white p-3 shadow-sm">
+        <p className="text-sm font-bold text-[#171717]">Tambah aset</p>
+        <input
+          name="name"
+          placeholder="Nama"
+          className="h-10 rounded-[12px] bg-[#F5F5F5] px-3 text-sm font-semibold outline-none"
+          required
+        />
+        <input
+          name="idrValue"
+          placeholder="Nilai"
+          className="h-10 rounded-[12px] bg-[#F5F5F5] px-3 text-sm font-semibold outline-none"
+          required
+        />
+        <input type="hidden" name="kind" value="other" />
+        <input type="hidden" name="visibility" value="household" />
+        <SubmitButton>
+          <Plus size={14} strokeWidth={2} />
+          Simpan
+        </SubmitButton>
+        <Feedback state={assetState} />
+      </form>
     </div>
   );
 }

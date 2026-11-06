@@ -7,19 +7,8 @@ import { requireUser } from "@/lib/auth/session";
 import { formatAppDateInputValue } from "@/lib/date/timezone";
 import { prisma } from "@/lib/db/prisma";
 
-type NewExpensePageProps = {
-  searchParams: Promise<{
-    mode?: string | string[];
-  }>;
-};
-
-export default async function NewExpensePage({ searchParams }: NewExpensePageProps) {
+export default async function NewExpensePage() {
   const currentUser = await requireUser();
-
-  const resolvedSearchParams = await searchParams;
-  const modeParam = Array.isArray(resolvedSearchParams.mode)
-    ? resolvedSearchParams.mode[0]
-    : resolvedSearchParams.mode;
 
   const [wallets, categories, lastExpenseRow] = await Promise.all([
     prisma.wallet.findMany({
@@ -98,7 +87,6 @@ export default async function NewExpensePage({ searchParams }: NewExpensePagePro
           <div>
             <p className="text-xs font-bold uppercase tracking-normal text-[#737373]">catat transaksi</p>
             <h1 className="text-xl font-bold text-[#0A0A0A]">Catat</h1>
-            <p className="mt-1 text-sm text-[#737373]">Manual atau ketik seperti chat</p>
           </div>
           <Link
             href="/dashboard"
@@ -115,7 +103,6 @@ export default async function NewExpensePage({ searchParams }: NewExpensePagePro
           wallets={wallets}
           categories={categories}
           defaultDate={formatAppDateInputValue(new Date())}
-          defaultMode={modeParam === "chat" ? "chat" : "manual"}
           lastExpense={lastExpense}
         />
 

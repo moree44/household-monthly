@@ -18,6 +18,15 @@
   }
 };
 
+/* Sidebar layout: desktop and iPad, including installed PWA on tablet. */
+@custom-variant wide {
+  @media (width >= 768px) {
+    & {
+      @slot;
+    }
+  }
+};
+
 :root {
   --background: #f5f5f5;
   --surface: #ffffff;
@@ -83,43 +92,29 @@ a {
   text-decoration: none;
 }
 
-@media (width >= 1024px) and (pointer: fine) and (hover: hover) {
-  html[data-shell="web"] .app-canvas {
-    margin-left: 16rem;
-    margin-right: 1.25rem;
-    max-width: 72rem;
-    min-height: calc(100vh - 3rem);
-  }
-
-  html[data-shell="web"] .app-canvas-phone {
-    margin-left: 16rem;
-    margin-right: auto;
-    max-width: 430px;
-    min-height: calc(100vh - 3rem);
-  }
-
-  html[data-shell="web"] .app-canvas-mid {
-    margin-left: 16rem;
-    margin-right: auto;
-    max-width: 36rem;
-    min-height: calc(100vh - 3rem);
-  }
-
-  html[data-shell="web"] body {
+@media (width >= 768px) {
+  body {
     background: #1a1a1a;
   }
-}
 
-@media (width >= 768px) and (pointer: coarse) {
-  html[data-shell="web"] .app-canvas {
-    max-width: 840px;
+  .app-canvas {
+    margin-left: 16rem;
+    margin-right: 1.25rem;
+    max-width: 88rem;
+    min-height: calc(100vh - 2.5rem);
   }
 
-  html[data-shell="web"] .app-canvas-phone {
-    max-width: 520px;
+  .app-canvas-phone {
+    margin-left: 16rem;
+    margin-right: auto;
+    max-width: 28rem;
+    min-height: calc(100vh - 2.5rem);
   }
 
-  html[data-shell="web"] .app-canvas-mid {
-    max-width: 640px;
+  .app-canvas-mid {
+    margin-left: 16rem;
+    margin-right: 1.25rem;
+    max-width: 44rem;
+    min-height: calc(100vh - 2.5rem);
   }
 }

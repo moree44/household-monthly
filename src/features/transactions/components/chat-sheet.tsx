@@ -9,6 +9,7 @@ import {
   type ChatChoice,
   type ChatDraft
 } from "@/features/transactions/chat-actions";
+import { cn } from "@/lib/utils";
 
 type ChatMessage = {
   id: string;
@@ -16,7 +17,7 @@ type ChatMessage = {
   text: string;
 };
 
-export function ChatPanel() {
+export function ChatPanel({ className }: { className?: string }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [pendingDraft, setPendingDraft] = useState<ChatDraft | null>(null);
@@ -75,7 +76,7 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="mt-3 flex min-h-[420px] flex-col rounded-[20px] bg-white p-3 shadow-sm">
+    <div className={cn("mt-3 flex min-h-[420px] flex-col rounded-[20px] bg-white p-3 shadow-sm", className)}>
       <div className="flex-1 space-y-2 overflow-y-auto pb-3">
         {messages.map((message) => (
           <div
