@@ -452,7 +452,40 @@ const commandStopTerms = new Set([
   "jd",
   "ke",
   "di",
-  "yg"
+  "yg",
+  "halo",
+  "hai",
+  "bro",
+  "bang",
+  "tolong",
+  "coba",
+  "biar",
+  "data",
+  "keuangan",
+  "uang",
+  "dulu",
+  "udah",
+  "itu",
+  "nanti",
+  "please",
+  "bersih",
+  "beres",
+  "beresin",
+  "bereskan",
+  "saldo",
+  "wallet",
+  "kan",
+  "ada",
+  "isinya",
+  "juga",
+  "semuanya",
+  "banget",
+  "sudah",
+  "sama",
+  "dan",
+  "atau",
+  "terus",
+  "trus"
 ]);
 
 function cleanTail(fragment: string, maxWords = 3) {
@@ -504,16 +537,30 @@ export type DeleteCommand = {
   amountDigits: string | null;
 };
 
+// Kalau sisa term-nya cuma kata lingkup keuangan (termasuk typo umum),
+// berarti user minta membersihkan semuanya, bukan satu jenis catatan.
+const financeScopeWords = new Set(["keuangan", "keungan", "uang", "saldo", "dana", "finansial", "keu"]);
+
 export function parseDeleteCommand(prompt: string): DeleteCommand | null {
   const text = prompt.toLowerCase();
 
-  if (!/\b(hapus|hapusin|buang|bersihin|bersihkan|delete|ilangin)\b/.test(text)) {
+  if (!/\b(hapus|hapusin|buang|bersih(in|kan)|kosong(in|kan)?|delete|ilangin)\b/.test(text)) {
     return null;
   }
 
+  let term = extractTopicTerm(text);
+
+  if (term) {
+    const tokens = term.split(" ");
+
+    if (tokens.every((token) => financeScopeWords.has(token))) {
+      term = null;
+    }
+  }
+
   return {
-    term: extractTopicTerm(text),
-    bulk: /\b(semua|all|bersih(in|kan))\b/.test(text),
+    term,
+    bulk: /\b(semua|all|bersih(in|kan)|kosong(in|kan)?)\b/.test(text),
     lastOnly: /\b(tadi|terakhir|barusan)\b/.test(text),
     lastMonth: /\bbulan lalu\b/.test(text),
     amountDigits: parseCatatAmount(text)
@@ -650,8 +697,14 @@ export type TransferIntent = {
 
 export function parseTransferIntent(prompt: string): TransferIntent | null {
   const text = prompt.toLowerCase().replace(/\s+/g, " ").trim();
-  const isTopUp = /\btop\s?up\b|\bisi\s+(?:saldo|dana)\b/.test(text);
-  const isTransfer = /\btransfer\b|\bpindah(?:in)?\b|\bmindah(?:in)?\b/.test(text);
+  const amountDigits = parseCatatAmount(text);
+  // "top up" khas, boleh di mana saja. "isi saldo/dana" cuma dianggap perintah
+  // kalau di awal kalimat, supaya "itu ada isi saldo 9 juta" tidak ikut ke-draft.
+  const isTopUp =
+    /\btop\s?up\b/.test(text) || /^\s*(isi\s+(?:saldo|dana)|top\s?up)\b/.test(text);
+  const isTransfer =
+    /\btransfer\b/.test(text) ||
+    (Boolean(amountDigits) && /\b(pindah|mindah)(?:in)?\b/.test(text));
 
   if (!isTopUp && !isTransfer) {
     return null;
@@ -662,7 +715,7 @@ export function parseTransferIntent(prompt: string): TransferIntent | null {
 
   return {
     type: isTopUp ? "top_up" : "transfer",
-    amountDigits: parseCatatAmount(text),
+    amountDigits,
     fromName: dariMatch ? cleanNameFragment(dariMatch[1]) : null,
     toName: keMatch ? cleanNameFragment(keMatch[1]) : null
   };

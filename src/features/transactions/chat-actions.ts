@@ -21,6 +21,7 @@ import {
   type WalletCommand
 } from "@/features/transactions/catat-parse";
 import { resolveCatatDraft, type ParsedCatatDraft } from "@/features/transactions/ai-actions";
+import { listCatatAiProviders } from "@/features/transactions/catat-ai-client";
 import {
   appendChatTurns,
   loadChatHistory,
@@ -71,7 +72,12 @@ export type ChatPendingAction =
         description: string | null;
       };
     }
-  | { kind: "delete_transactions"; transactionIds: string[]; summary: string }
+  | {
+      kind: "delete_transactions";
+      transactionIds: string[];
+      summary: string;
+      requirePhrase?: string;
+    }
   | {
       kind: "edit_transaction";
       transactionId: string;
@@ -115,6 +121,21 @@ type CatatOptions = {
   categories: Option[];
   sourceAccounts: Option[];
 };
+
+// Gate lokal bukan dinding: matched=false berarti "verba kena tapi ga bisa
+// dieksekusi" — boleh dilanjutkan ke AI buat arbitrase sebelum menyerah.
+type GateOutcome = {
+  response: ChatResponse;
+  matched: boolean;
+};
+
+function gateMatched(response: ChatResponse): GateOutcome {
+  return { response, matched: true };
+}
+
+function gateMissed(response: ChatResponse): GateOutcome {
+  return { response, matched: false };
+}
 
 async function loadCatatOptions(): Promise<CatatOptions> {
   const [wallets, categories, sourceAccounts] = await Promise.all([
@@ -409,14 +430,43 @@ async function routeWalletCommand(command: WalletCommand, options: CatatOptions)
   };
 }
 
-async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse> {
+async function routeDeleteCommand(command: DeleteCommand): Promise<GateOutcome> {
   const currentMonth = getMonthContext();
   const month = command.lastMonth ? getMonthContext(currentMonth.previousKey) : currentMonth;
 
   if (!command.term && !command.amountDigits) {
-    return emptyChat(
-      "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin, sebut jenisnya: bersihin catatan gorengan."
-    );
+    if (!command.bulk) {
+      return gateMatched(
+        emptyChat(
+          "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin semuanya: hapus semua transaksi bulan ini."
+        )
+      );
+    }
+
+    const all = await findTransactionMatches({ term: null, amountDigits: null, month, take: BULK_DELETE_LIMIT });
+
+    if (all.totalCount === 0) {
+      return gateMatched(emptyChat(`Sudah bersih, ga ada transaksi di ${month.label}.`));
+    }
+
+    if (all.totalCount > BULK_DELETE_LIMIT) {
+      return gateMatched(
+        emptyChat(
+          `Ada ${all.totalCount} transaksi di ${month.label} — kebanyakan buat dihapus sekaligus dari chat (maksimal ${BULK_DELETE_LIMIT}). Lewat History ya.`
+        )
+      );
+    }
+
+    return gateMatched({
+      reply: `Ini menghapus SEMUA ${all.totalCount} transaksi di ${month.label} (total ${formatRupiah(all.totalAmount)}). Yakin? Konfirmasi dengan "ya hapus semua".`,
+      pendingAction: {
+        kind: "delete_transactions",
+        transactionIds: all.rows.map((row) => row.id),
+        summary: `SEMUA ${all.totalCount} transaksi ${month.label}`,
+        requirePhrase: "ya hapus semua"
+      },
+      choices: []
+    });
   }
 
   let matches = await findTransactionMatches({
@@ -431,8 +481,10 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse>
   }
 
   if (matches.totalCount === 0) {
-    return emptyChat(
-      `Ga ketemu catatan${command.term ? ` "${command.term}"` : ""} di ${month.label}. Cek History kalau mau cari manual.`
+    return gateMissed(
+      emptyChat(
+        `Ga ketemu catatan "${command.term}" di ${month.label}. Sebut jenisnya biar saya beresin, contoh: bersihin catatan gorengan.`
+      )
     );
   }
 
@@ -440,7 +492,7 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse>
     const row = matches.rows[0];
     const prefix = command.lastOnly && matches.totalCount > 1 ? "Hapus yang terakhir: " : "Hapus ";
 
-    return {
+    return gateMatched({
       reply: `${prefix}${row.label}?`,
       pendingAction: {
         kind: "delete_transactions",
@@ -448,19 +500,21 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse>
         summary: row.label
       },
       choices: []
-    };
+    });
   }
 
   const subject = command.term ? `"${command.term}"` : "yang dicari";
 
   if (command.bulk) {
     if (matches.totalCount > BULK_DELETE_LIMIT) {
-      return emptyChat(
-        `Ketemu ${matches.totalCount} catatan ${subject} — kebanyakan buat dihapus sekaligus dari chat (maksimal ${BULK_DELETE_LIMIT}). Lewat History ya.`
+      return gateMatched(
+        emptyChat(
+          `Ketemu ${matches.totalCount} catatan ${subject} — kebanyakan buat dihapus sekaligus dari chat (maksimal ${BULK_DELETE_LIMIT}). Lewat History ya.`
+        )
       );
     }
 
-    return {
+    return gateMatched({
       reply: `Ketemu ${matches.totalCount} catatan ${subject}, total ${formatRupiah(matches.totalAmount)}. Hapus semuanya?`,
       pendingAction: {
         kind: "delete_transactions",
@@ -468,7 +522,7 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse>
         summary: `${matches.totalCount} catatan ${subject}`
       },
       choices: []
-    };
+    });
   }
 
   const choices: ChatChoice[] = matches.rows
@@ -487,16 +541,16 @@ async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse>
     });
   }
 
-  return {
+  return gateMatched({
     reply: `Ketemu ${matches.totalCount} catatan ${subject} di ${month.label}. Pilih yang mana?`,
     pendingAction: null,
     choices
-  };
+  });
 }
 
-async function routeEditCommand(command: EditCommand, options: CatatOptions): Promise<ChatResponse> {
+async function routeEditCommand(command: EditCommand, options: CatatOptions): Promise<GateOutcome> {
   if (!command.term) {
-    return emptyChat("Edit catatan yang mana? Contoh: edit gorengan jadi 10rb.");
+    return gateMatched(emptyChat("Edit catatan yang mana? Contoh: edit gorengan jadi 10rb."));
   }
 
   const hasChanges = Boolean(
@@ -504,19 +558,23 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
   );
 
   if (!hasChanges) {
-    return emptyChat("Mau diubah jadi apa? Contoh: edit gorengan jadi 10rb, atau edit bawang kategorinya transport.");
+    return gateMatched(
+      emptyChat("Mau diubah jadi apa? Contoh: edit gorengan jadi 10rb, atau edit bawang kategorinya transport.")
+    );
   }
 
   const month = getMonthContext();
   const matches = await findTransactionMatches({ term: command.term, amountDigits: null, month });
 
   if (matches.totalCount === 0) {
-    return emptyChat(`Ga ketemu catatan "${command.term}" di ${month.label}.`);
+    return gateMissed(emptyChat(`Ga ketemu catatan "${command.term}" di ${month.label}.`));
   }
 
   if (matches.totalCount > 1) {
-    return emptyChat(
-      `Ketemu ${matches.totalCount} catatan "${command.term}". Sebut lebih spesifik biar ga salah ubah.`
+    return gateMissed(
+      emptyChat(
+        `Ketemu ${matches.totalCount} catatan "${command.term}". Sebut lebih spesifik biar ga salah ubah.`
+      )
     );
   }
 
@@ -531,7 +589,9 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
     const category = matchOptionByName(command.categoryName, options.categories);
 
     if (!category) {
-      return emptyChat(`Kategori "${command.categoryName}" ga ada. Tambah dulu atau pilih yang sudah ada.`);
+      return gateMatched(
+        emptyChat(`Kategori "${command.categoryName}" ga ada. Tambah dulu atau pilih yang sudah ada.`)
+      );
     }
 
     changes.categoryId = category.id;
@@ -541,7 +601,7 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
     const wallet = matchOptionByName(command.walletName, options.wallets);
 
     if (!wallet) {
-      return emptyChat(`Wallet "${command.walletName}" ga ada.`);
+      return gateMatched(emptyChat(`Wallet "${command.walletName}" ga ada.`));
     }
 
     changes.walletId = wallet.id;
@@ -571,7 +631,7 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
     parts.push(`catatan jadi "${changes.description}"`);
   }
 
-  return {
+  return gateMatched({
     reply: `Ubah ${row.label} — ${parts.join(", ")}?`,
     pendingAction: {
       kind: "edit_transaction",
@@ -580,7 +640,7 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
       changes
     },
     choices: []
-  };
+  });
 }
 
 async function completeTopUpDraft(
@@ -731,26 +791,30 @@ async function routeParsedDraft(
   }
 
   if (parsed.intent === "delete_transaction") {
-    return routeDeleteCommand({
-      term: parsed.deleteTerm,
-      bulk: parsed.deleteBulk,
-      lastOnly: false,
-      lastMonth: false,
-      amountDigits: digitsOnly(parsed.amount)
-    });
+    return (
+      await routeDeleteCommand({
+        term: parsed.deleteTerm,
+        bulk: parsed.deleteBulk,
+        lastOnly: false,
+        lastMonth: false,
+        amountDigits: digitsOnly(parsed.amount)
+      })
+    ).response;
   }
 
   if (parsed.intent === "edit_transaction") {
-    return routeEditCommand(
-      {
-        term: parsed.editTerm,
-        amountDigits: parsed.editAmount,
-        categoryName: parsed.editCategoryName,
-        walletName: parsed.editWalletName,
-        description: null
-      },
-      options
-    );
+    return (
+      await routeEditCommand(
+        {
+          term: parsed.editTerm,
+          amountDigits: parsed.editAmount,
+          categoryName: parsed.editCategoryName,
+          walletName: parsed.editWalletName,
+          description: null
+        },
+        options
+      )
+    ).response;
   }
 
   const amountDigits = digitsOnly(parsed.amount);
@@ -936,7 +1000,8 @@ async function applyPickedChoice(
 
 async function executePendingAction(
   userId: string,
-  pending: ChatPendingAction
+  pending: ChatPendingAction,
+  text: string
 ): Promise<ChatResponse> {
   switch (pending.kind) {
     case "save_expense": {
@@ -985,6 +1050,18 @@ async function executePendingAction(
         : { reply: result.message, pendingAction: null, choices: [] };
     }
     case "delete_transactions": {
+      if (pending.requirePhrase) {
+        const normalized = text.toLowerCase().replace(/[.,!?]/g, " ").replace(/\s+/g, " ").trim();
+
+        if (!/^(ya|y)[,\s]+hapus\s*(semua|semuanya|all)$/.test(normalized)) {
+          return {
+            reply: `Konfirmasinya kurang pas. Ketik persis "ya hapus semua" buat lanjut, atau "batal".`,
+            pendingAction: pending,
+            choices: []
+          };
+        }
+      }
+
       const count = await softDeleteTransactions(userId, pending.transactionIds);
 
       return {
@@ -1020,6 +1097,34 @@ async function executePendingAction(
   }
 }
 
+// Kalau gate lokal gagal mengeksekusi (verba kena tapi ga ketemu datanya),
+// minta pendapat AI dulu sebelum pakai jawaban gate. Hanya dipakai kalau
+// AI benar-benar menjawab (source "ai"), bukan fallback lokal.
+async function arbitrateWithAi(
+  userId: string,
+  text: string,
+  options: CatatOptions,
+  history: ChatHistoryTurn[]
+): Promise<ChatResponse | null> {
+  if (listCatatAiProviders().length === 0) {
+    return null;
+  }
+
+  const parsed = await resolveCatatDraft({
+    prompt: text,
+    wallets: options.wallets,
+    categories: options.categories,
+    sourceAccounts: options.sourceAccounts,
+    history
+  });
+
+  if (parsed.source !== "ai") {
+    return null;
+  }
+
+  return routeParsedDraft(userId, parsed, options);
+}
+
 async function routeNewIntent(
   userId: string,
   text: string,
@@ -1037,13 +1142,25 @@ async function routeNewIntent(
   const deleteCommand = parseDeleteCommand(lower);
 
   if (deleteCommand) {
-    return routeDeleteCommand(deleteCommand);
+    const outcome = await routeDeleteCommand(deleteCommand);
+
+    if (outcome.matched) {
+      return outcome.response;
+    }
+
+    return (await arbitrateWithAi(userId, text, options, history)) ?? outcome.response;
   }
 
   const editCommand = parseEditCommand(lower);
 
   if (editCommand) {
-    return routeEditCommand(editCommand, options);
+    const outcome = await routeEditCommand(editCommand, options);
+
+    if (outcome.matched) {
+      return outcome.response;
+    }
+
+    return (await arbitrateWithAi(userId, text, options, history)) ?? outcome.response;
   }
 
   const transferIntent = parseTransferIntent(lower);
@@ -1117,7 +1234,7 @@ export async function getChatGreetingAction() {
           ? `Sore, ${name}.`
           : `Malam, ${name}.`;
 
-  return `${hello} Mau catat, hapus atau edit catatan, cek saldo, top up, atau kelola wallet?`;
+  return `${hello} Ada yang mau dicatat atau ditanya?`;
 }
 
 export async function sendCatatChatAction(
@@ -1155,7 +1272,7 @@ export async function sendCatatChatAction(
     }
 
     if (isAffirmative(text)) {
-      return rememberTurn(await executePendingAction(currentUser.id, pendingAction));
+      return rememberTurn(await executePendingAction(currentUser.id, pendingAction, text));
     }
 
     const fresh = await routeNewIntent(currentUser.id, text, options, history);

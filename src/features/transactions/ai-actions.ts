@@ -61,6 +61,8 @@ export type ParsedCatatDraft = {
   editCategoryName: string | null;
   editWalletName: string | null;
   finance: CatatFinanceQuestion | null;
+  /** "ai" kalau jawaban ini hasil model remote, "local" kalau fallback lokal. */
+  source: "ai" | "local";
 };
 
 function emptyParsed(): ParsedCatatDraft {
@@ -88,7 +90,8 @@ function emptyParsed(): ParsedCatatDraft {
     editAmount: null,
     editCategoryName: null,
     editWalletName: null,
-    finance: null
+    finance: null,
+    source: "local"
   };
 }
 
@@ -345,7 +348,8 @@ export async function resolveCatatDraft(input: {
             editAmount: remoteDigits(editChanges.amount),
             editCategoryName: remoteString(editChanges.categoryName, 60),
             editWalletName: remoteString(editChanges.walletName, 60),
-            finance: remoteFinanceQuestion(remote.finance)
+            finance: remoteFinanceQuestion(remote.finance),
+            source: "ai"
           };
         }
       }

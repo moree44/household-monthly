@@ -156,7 +156,9 @@ async function completeOnce(
       ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
       messages
     }),
-    signal: AbortSignal.timeout(8000)
+    // Model reasoning (mis. qwen di Fortytwo) butuh 12-15 detik untuk prompt
+    // agent/skill utuh — 8 detik lama bikin semua request timeout.
+    signal: AbortSignal.timeout(25000)
   });
 
   if (!response.ok) {

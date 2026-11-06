@@ -32,6 +32,10 @@ function confirmLabel(pending: ChatPendingAction) {
     case "save_transfer":
       return "Ya, simpan";
     case "delete_transactions":
+      if (pending.requirePhrase) {
+        return "Ya, hapus semua";
+      }
+
       return pending.transactionIds.length > 1 ? `Ya, hapus (${pending.transactionIds.length})` : "Ya, hapus";
     case "edit_transaction":
       return "Ya, ubah";
@@ -40,6 +44,19 @@ function confirmLabel(pending: ChatPendingAction) {
     case "deactivate_wallet":
       return "Ya, nonaktifkan";
   }
+}
+
+// Draft yang masih kurang data jangan tampilkan tombol konfirmasi biar ga membingungkan.
+function pendingReady(pending: ChatPendingAction) {
+  if (pending.kind === "save_top_up") {
+    return Boolean(pending.draft.walletId && pending.draft.sourceAccountId);
+  }
+
+  if (pending.kind === "save_transfer") {
+    return Boolean(pending.draft.fromWalletId && pending.draft.toWalletId);
+  }
+
+  return true;
 }
 
 export function ChatPanel({ className }: { className?: string }) {
@@ -197,14 +214,16 @@ export function ChatPanel({ className }: { className?: string }) {
 
       {pending ? (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void send(confirmLabel(pending), { echo: confirmLabel(pending), pendingOverride: pending })}
-            className="h-9 rounded-full bg-[#171717] px-3.5 text-xs font-bold text-white"
-          >
-            {confirmLabel(pending)}
-          </button>
+          {pendingReady(pending) ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void send(confirmLabel(pending), { echo: confirmLabel(pending), pendingOverride: pending })}
+              className="h-9 rounded-full bg-[#171717] px-3.5 text-xs font-bold text-white"
+            >
+              {confirmLabel(pending)}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={busy}

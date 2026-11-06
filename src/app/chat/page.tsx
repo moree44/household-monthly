@@ -4,6 +4,10 @@ import { BottomNav } from "@/components/navigation/bottom-nav";
 import { ChatPanel } from "@/features/transactions/components/chat-sheet";
 import { requireUser } from "@/lib/auth/session";
 
+// Arbitrase AI butuh 12-15 detik (model reasoning) — di Vercel default
+// function limit 10 detik, jadi naikkan lewat segment config halaman ini.
+export const maxDuration = 60;
+
 export default async function ChatPage() {
   await requireUser();
 

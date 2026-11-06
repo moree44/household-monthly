@@ -40,7 +40,7 @@ export function ChatDock() {
             onClick={() => setOpen(false)}
           />
           <section
-            className="absolute inset-x-0 bottom-0 flex h-[min(82vh,640px)] flex-col rounded-t-[24px] bg-[#F5F5F5] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
+            className="absolute inset-x-0 bottom-0 flex h-[min(62vh,460px)] flex-col rounded-t-[24px] bg-[#F5F5F5] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl"
           >
             <div className="mb-2 flex items-center justify-between px-1">
               <p className="text-sm font-bold text-[#171717]">Chat AI</p>

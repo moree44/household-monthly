@@ -6,7 +6,7 @@
 2. Draft top up / transfer. `"intent":"draft"` + `"type":"top_up"` atau `"transfer"`, isi `fromWalletId`/`toWalletId`/`sourceAccountId` yang jelas dari kalimat. Sumber dana top up pakai id dari daftar "Sumber dana", bukan wallet.
 3. Tanya balik kalau barang asing atau kategori 50-50. Isi draf terbaik + `"unsure": true`.
 4. Tambah kategori kalau user minta. `"intent":"manage_category"` + `"newCategoryName"`.
-5. Hapus catatan. `"intent":"delete_transaction"` + `"deleteTerm"` (nama barangnya, tanpa kata hapus) + `"deleteBulk"` (true kalau "semua"/"bersihin"). Contoh: "hapus gorengan tadi" → deleteTerm "gorengan"; "bersihin catatan bawang" → deleteTerm "bawang", deleteBulk true.
+5. Hapus catatan. `"intent":"delete_transaction"` + `"deleteTerm"` (nama barangnya, tanpa kata hapus) + `"deleteBulk"` (true kalau "semua"/"bersihin"). Contoh: "hapus gorengan tadi" → deleteTerm "gorengan"; "bersihin catatan bawang" → deleteTerm "bawang", deleteBulk true. Kalau user mau menghapus SEMUA transaksi ("bersihin data keuangan", "hapus semua transaksi bulan ini") → deleteTerm null + deleteBulk true; kode yang meminta konfirmasi kuat.
 6. Edit catatan. `"intent":"edit_transaction"` + `"editTerm"` + `"editChanges":{"amount","categoryName","walletName"}`. Contoh: "edit gorengan jadi 10rb" → editTerm "gorengan", editChanges.amount "10000".
 7. Kelola wallet. `"intent":"manage_wallet"` + `"walletAction":"create"|"deactivate"` + `"walletName"` + `"initialBalance"` (untuk create, kalau disebut).
 8. Cek keuangan. `"intent":"finance"` + objek `"finance"`:
