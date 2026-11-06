@@ -1,8 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
+import { APP_TIME_ZONE } from "@/lib/date/timezone";
+
+const historyDayFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  timeZone: APP_TIME_ZONE
+});
 
 export type ChatHistoryTurn = {
   role: "user" | "bot";
   text: string;
+  dayLabel?: string;
 };
 
 export function normalizeMemoryTerm(value: string) {
@@ -90,7 +98,7 @@ export async function loadChatHistory(userId: string): Promise<ChatHistoryTurn[]
     where: { userId },
     orderBy: { createdAt: "desc" },
     take: 40,
-    select: { role: true, text: true }
+    select: { role: true, text: true, createdAt: true }
   });
 
   return rows
@@ -98,7 +106,8 @@ export async function loadChatHistory(userId: string): Promise<ChatHistoryTurn[]
     .filter((row) => row.role === "user" || row.role === "bot")
     .map((row) => ({
       role: row.role as "user" | "bot",
-      text: row.text
+      text: row.text,
+      dayLabel: historyDayFormatter.format(row.createdAt)
     }));
 }
 

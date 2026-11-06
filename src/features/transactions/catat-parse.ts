@@ -410,3 +410,335 @@ export function parseCatatLocally(
     queryTerm: extractQueryTerm(prompt)
   };
 }
+
+// ---------------------------------------------------------------------------
+// Command gates for chat: delete / edit / wallet / top-up / transfer / finance
+// ---------------------------------------------------------------------------
+
+const commandStopTerms = new Set([
+  ...stopTerms,
+  "hapus",
+  "hapusin",
+  "buang",
+  "bersihin",
+  "bersihkan",
+  "delete",
+  "edit",
+  "ubah",
+  "ganti",
+  "revisi",
+  "update",
+  "semua",
+  "all",
+  "catat",
+  "catatan",
+  "transaksi",
+  "pengeluaran",
+  "belanja",
+  "bulan",
+  "ini",
+  "lalu",
+  "tadi",
+  "kemarin",
+  "terakhir",
+  "barusan",
+  "aja",
+  "saja",
+  "dong",
+  "ya",
+  "deh",
+  "nih",
+  "jadi",
+  "jd",
+  "ke",
+  "di",
+  "yg"
+]);
+
+function cleanTail(fragment: string, maxWords = 3) {
+  const fillers = new Set(["dong", "ya", "deh", "aja", "saja", "nih", "yg", "yang"]);
+  const tokens = fragment
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  while (tokens.length > 0 && fillers.has(tokens[tokens.length - 1])) {
+    tokens.pop();
+  }
+
+  return tokens.slice(0, maxWords).join(" ").trim() || null;
+}
+
+export function extractTopicTerm(prompt: string) {
+  const tokens = normalize(prompt)
+    .split(" ")
+    .filter((token) => token && !commandStopTerms.has(token) && !/^\d/.test(token));
+
+  return tokens.slice(0, 4).join(" ") || null;
+}
+
+export function matchOptionByName(text: string, options: CatatOption[]): CatatOption | null {
+  const normalized = normalize(text);
+
+  if (!normalized) {
+    return null;
+  }
+
+  return (
+    options.find((option) => normalize(option.name) === normalized) ??
+    options.find((option) => normalized.includes(normalize(option.name))) ??
+    options.find((option) => normalized.length >= 3 && normalize(option.name).includes(normalized)) ??
+    options.find((option) => {
+      const first = normalize(option.name).split(/\s+/)[0];
+      return first.length > 3 && normalized.includes(first);
+    }) ??
+    null
+  );
+}
+
+export type DeleteCommand = {
+  term: string | null;
+  bulk: boolean;
+  lastOnly: boolean;
+  lastMonth: boolean;
+  amountDigits: string | null;
+};
+
+export function parseDeleteCommand(prompt: string): DeleteCommand | null {
+  const text = prompt.toLowerCase();
+
+  if (!/\b(hapus|hapusin|buang|bersihin|bersihkan|delete|ilangin)\b/.test(text)) {
+    return null;
+  }
+
+  return {
+    term: extractTopicTerm(text),
+    bulk: /\b(semua|all|bersih(in|kan))\b/.test(text),
+    lastOnly: /\b(tadi|terakhir|barusan)\b/.test(text),
+    lastMonth: /\bbulan lalu\b/.test(text),
+    amountDigits: parseCatatAmount(text)
+  };
+}
+
+export type EditCommand = {
+  term: string | null;
+  amountDigits: string | null;
+  categoryName: string | null;
+  walletName: string | null;
+  description: string | null;
+};
+
+export function parseEditCommand(prompt: string): EditCommand | null {
+  const text = prompt.toLowerCase();
+
+  if (!/\b(edit|ubah|ganti|revisi)\b/.test(text)) {
+    return null;
+  }
+
+  let working = text;
+  let amountDigits: string | null = null;
+  let categoryName: string | null = null;
+  let walletName: string | null = null;
+  let description: string | null = null;
+
+  const amountMatch = working.match(
+    /(?:jadi|jd|nominal(?:nya)?|jumlah(?:nya)?)\s+([\d.,]+\s*(?:rb|ribu|k|jt|juta)?)/
+  );
+
+  if (amountMatch) {
+    amountDigits = parseCatatAmount(amountMatch[1]);
+    working = working.replace(amountMatch[0], " ");
+  }
+
+  const categoryMatch =
+    working.match(/kategor(?:inya|i)\s*(?:jadi|jd|ke|menjadi)?\s*(.+)/) ??
+    working.match(/(?:jadi|jd)\s+kategor(?:inya|i)\s+(.+)/);
+
+  if (categoryMatch) {
+    categoryName = cleanTail(categoryMatch[1]);
+    working = working.replace(categoryMatch[0], " ");
+  }
+
+  const walletMatch =
+    working.match(/(?:pindah(?:in)?|mindah(?:in)?)\s+ke\s+(?:wallet|dompet)?\s*(.+)/) ??
+    working.match(/(?:wallet|dompet)(?:nya)?\s*(?:jadi|jd|ke)\s*(.+)/);
+
+  if (walletMatch) {
+    walletName = cleanTail(walletMatch[1], 4);
+    working = working.replace(walletMatch[0], " ");
+  }
+
+  const descriptionMatch = working.match(/(?:catatan|note)(?:nya)?\s*(?:jadi|jd)?\s*(.+)/);
+
+  if (descriptionMatch) {
+    description = cleanTail(descriptionMatch[1], 8);
+    working = working.replace(descriptionMatch[0], " ");
+  }
+
+  return {
+    term: extractTopicTerm(working),
+    amountDigits,
+    categoryName,
+    walletName,
+    description
+  };
+}
+
+export type WalletCommand = {
+  action: "create" | "deactivate";
+  name: string | null;
+  initialBalanceDigits: string | null;
+};
+
+const transactionNouns = /\b(catat|catatan|transaksi|pengeluaran|belanja|transfer|top\s?up)\b/;
+
+export function parseWalletCommand(prompt: string): WalletCommand | null {
+  const text = prompt.toLowerCase();
+
+  if (!/\b(wallet|dompet)\b/.test(text) || transactionNouns.test(text)) {
+    return null;
+  }
+
+  const wantsCreate = /\b(tambah|buat|bikin)\b/.test(text);
+  const wantsDeactivate = /\b(hapus|hapusin|buang|nonaktif(?:in)?|mati(?:in)?)\b/.test(text);
+
+  if (!wantsCreate && !wantsDeactivate) {
+    return null;
+  }
+
+  const verbPattern = wantsCreate
+    ? /(?:tambah|buat|bikin)\s+(?:wallet|dompet)\s+(.+)/
+    : /(?:hapus|hapusin|buang|nonaktif(?:in)?|mati(?:in)?)\s+(?:wallet|dompet)?\s*(.+)/;
+  const verbMatch = text.match(verbPattern);
+
+  let name = verbMatch?.[1] ?? null;
+
+  if (name) {
+    name = name
+      .replace(/\b(saldo(?:\s+awal)?|isi|sebesar)\s+[\d.,]+\s*(rb|ribu|k|jt|juta)?\b/g, " ")
+      .replace(/\b(dong|ya|deh|aja|saja|baru|nih)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    name = name || null;
+  }
+
+  return {
+    action: wantsCreate ? "create" : "deactivate",
+    name,
+    initialBalanceDigits: wantsCreate ? parseCatatAmount(text) : null
+  };
+}
+
+function cleanNameFragment(fragment: string) {
+  const cleaned = fragment
+    .replace(/\b(wallet|dompet|rekening|rek|saldo|dari)\b/g, " ")
+    .replace(/\b(dong|ya|deh|aja|saja)\b/g, " ")
+    .replace(/[\d.,]+\s*(rb|ribu|k|jt|juta)?\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned || null;
+}
+
+export type TransferIntent = {
+  type: "top_up" | "transfer";
+  amountDigits: string | null;
+  fromName: string | null;
+  toName: string | null;
+};
+
+export function parseTransferIntent(prompt: string): TransferIntent | null {
+  const text = prompt.toLowerCase().replace(/\s+/g, " ").trim();
+  const isTopUp = /\btop\s?up\b|\bisi\s+(?:saldo|dana)\b/.test(text);
+  const isTransfer = /\btransfer\b|\bpindah(?:in)?\b|\bmindah(?:in)?\b/.test(text);
+
+  if (!isTopUp && !isTransfer) {
+    return null;
+  }
+
+  const dariMatch = text.match(/\bdari\s+(.+?)(?:\s+ke\s+|$)/);
+  const keMatch = text.match(/\s+ke\s+(.+)$/);
+
+  return {
+    type: isTopUp ? "top_up" : "transfer",
+    amountDigits: parseCatatAmount(text),
+    fromName: dariMatch ? cleanNameFragment(dariMatch[1]) : null,
+    toName: keMatch ? cleanNameFragment(keMatch[1]) : null
+  };
+}
+
+export type FinanceQuestion = {
+  kind: "balance" | "category" | "week" | "person" | "list";
+  categoryName: string | null;
+  week: number | null;
+  person: "istri" | "suami" | null;
+  listTerm: string | null;
+};
+
+const weekOrdinals: Record<string, number> = {
+  "1": 1,
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  pertama: 1,
+  kedua: 2,
+  ketiga: 3,
+  keempat: 4
+};
+
+const financeQueryWords =
+  /(berapa|habis|abis|total|pengeluaran|belanja|ringkas|summary|daftar|list|catatan|transaksi|saldo|keuangan)/;
+
+export function parseFinanceQuestion(
+  prompt: string,
+  categories: CatatOption[]
+): FinanceQuestion | null {
+  const text = prompt.toLowerCase().replace(/\s+/g, " ").trim();
+  const weekMatch = text.match(/(?:minggu|pekan)\s+(1|2|3|4|pertama|kedua|ketiga|keempat)\b/);
+  const textWithoutWeek = weekMatch ? text.replace(weekMatch[0], " ") : text;
+  const hasAmount = Boolean(parseCatatAmount(textWithoutWeek));
+  const person = /istri|\bdoe\b/.test(text) ? "istri" : /\b(suami|kita|bersama)\b/.test(text) ? "suami" : null;
+
+  if (weekMatch && !hasAmount) {
+    return {
+      kind: "week",
+      categoryName: null,
+      week: weekOrdinals[weekMatch[1]] ?? null,
+      person,
+      listTerm: null
+    };
+  }
+
+  if (hasAmount || !financeQueryWords.test(text)) {
+    return null;
+  }
+
+  if (/\b(daftar|list|catatan|transaksi)\b/.test(text) && !/berapa|total|ringkas|summary/.test(text)) {
+    return {
+      kind: "list",
+      categoryName: null,
+      week: null,
+      person: null,
+      listTerm: extractTopicTerm(text)
+    };
+  }
+
+  const categoryMatch = matchOptionByName(textWithoutWeek, categories);
+
+  if (categoryMatch) {
+    return {
+      kind: "category",
+      categoryName: categoryMatch.name,
+      week: null,
+      person: null,
+      listTerm: null
+    };
+  }
+
+  if (person) {
+    return { kind: "person", categoryName: null, week: null, person, listTerm: null };
+  }
+
+  return { kind: "balance", categoryName: null, week: null, person: null, listTerm: null };
+}

@@ -7,6 +7,19 @@ import { getDashboardData } from "@/features/dashboard/data";
 import { getMonthContext } from "@/lib/date/month";
 import { APP_TIME_ZONE, formatAppDateInputValue, parseAppDateInput } from "@/lib/date/timezone";
 import { formatRupiah } from "@/lib/format/currency";
+import {
+  matchOptionByName,
+  parseDeleteCommand,
+  parseEditCommand,
+  parseFinanceQuestion,
+  parseTransferIntent,
+  parseWalletCommand,
+  type DeleteCommand,
+  type EditCommand,
+  type FinanceQuestion,
+  type TransferIntent,
+  type WalletCommand
+} from "@/features/transactions/catat-parse";
 import { resolveCatatDraft, type ParsedCatatDraft } from "@/features/transactions/ai-actions";
 import {
   appendChatTurns,
@@ -14,31 +27,97 @@ import {
   rememberCategory,
   type ChatHistoryTurn
 } from "@/features/transactions/catat-recall";
+import {
+  answerCategoryTotal,
+  answerPersonTotal,
+  answerTransactionList,
+  answerWeekTotal,
+  applyTransactionEdit,
+  BULK_DELETE_LIMIT,
+  createChatWallet,
+  deactivateChatWallet,
+  findTransactionMatches,
+  getTransactionMatchById,
+  saveTopUpDraft,
+  saveTransferDraft,
+  softDeleteTransactions,
+  type TransactionEditChanges
+} from "@/features/transactions/chat-helpers";
 
-export type ChatDraft = {
+export type ExpenseDraft = {
   amount: string;
   walletId: string;
   categoryId: string;
   description: string;
 };
 
+export type ChatPendingAction =
+  | { kind: "save_expense"; draft: ExpenseDraft }
+  | {
+      kind: "save_top_up";
+      draft: {
+        amount: string;
+        walletId: string | null;
+        sourceAccountId: string | null;
+        description: string | null;
+      };
+    }
+  | {
+      kind: "save_transfer";
+      draft: {
+        amount: string;
+        fromWalletId: string | null;
+        toWalletId: string | null;
+        description: string | null;
+      };
+    }
+  | { kind: "delete_transactions"; transactionIds: string[]; summary: string }
+  | {
+      kind: "edit_transaction";
+      transactionId: string;
+      label: string;
+      changes: TransactionEditChanges;
+    }
+  | { kind: "create_wallet"; name: string; initialBalance: string | null }
+  | { kind: "deactivate_wallet"; walletId: string; name: string };
+
+export type ChatChoiceKind =
+  | "category"
+  | "transaction"
+  | "delete_all"
+  | "source_account"
+  | "from_wallet"
+  | "to_wallet"
+  | "wallet"
+  | "retry";
+
 export type ChatChoice = {
   label: string;
-  categoryId: string;
+  value: string;
+  kind: ChatChoiceKind;
+};
+
+export type PickedChoice = {
+  kind: ChatChoiceKind;
+  value: string;
 };
 
 export type ChatResponse = {
   reply: string;
-  saved: boolean;
-  draft: ChatDraft | null;
-  needsConfirmation: boolean;
+  pendingAction: ChatPendingAction | null;
   choices: ChatChoice[];
 };
 
 type Option = { id: string; name: string };
 
-async function loadCatatOptions() {
-  const [wallets, categories] = await Promise.all([
+type CatatOptions = {
+  wallets: Option[];
+  categories: Option[];
+  sourceAccounts: Option[];
+};
+
+async function loadCatatOptions(): Promise<CatatOptions> {
+  const [wallets, categories, sourceAccounts] = await Promise.all([
     prisma.wallet.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
@@ -48,33 +127,19 @@ async function loadCatatOptions() {
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true }
+    }),
+    prisma.sourceAccount.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true }
     })
   ]);
 
-  return { wallets, categories };
-}
-
-function draftFromParsed(parsed: ParsedCatatDraft): ChatDraft | null {
-  if (!parsed.amount || !parsed.walletId || !parsed.categoryId) {
-    return null;
-  }
-
-  return {
-    amount: parsed.amount,
-    walletId: parsed.walletId,
-    categoryId: parsed.categoryId,
-    description: parsed.description ?? ""
-  };
+  return { wallets, categories, sourceAccounts };
 }
 
 function emptyChat(reply: string): ChatResponse {
-  return {
-    reply,
-    saved: false,
-    draft: null,
-    needsConfirmation: false,
-    choices: []
-  };
+  return { reply, pendingAction: null, choices: [] };
 }
 
 function isSpendingQuery(text: string) {
@@ -89,7 +154,11 @@ function isAddCategory(text: string) {
 }
 
 function isAffirmative(text: string) {
-  return /^(ya|iya|ok|oke|y|simpan|benar|betul|iyo|okey)\b/i.test(text.trim());
+  return /^(ya|iya|ok|oke|y|simpan|benar|betul|iyo|okey|yakin|gas|lanjut|sip)\b/i.test(text.trim());
+}
+
+function isCancel(text: string) {
+  return /^(batal|batalin|tidak|nggak|gak|jangan|cancel|no|stop)\b/i.test(text.trim());
 }
 
 function categoryNameFromAddCommand(text: string) {
@@ -97,18 +166,32 @@ function categoryNameFromAddCommand(text: string) {
   return match?.[2]?.replace(/[.?!]+$/, "").trim() || "";
 }
 
-function matchCategory(text: string, categories: Option[]) {
-  const normalized = text.trim().toLowerCase();
+function describePending(pending: ChatPendingAction) {
+  switch (pending.kind) {
+    case "save_expense":
+    case "save_top_up":
+    case "save_transfer":
+      return "penyimpanan transaksi";
+    case "delete_transactions":
+      return "penghapusan catatan";
+    case "edit_transaction":
+      return "perubahan catatan";
+    case "create_wallet":
+      return "pembuatan wallet";
+    case "deactivate_wallet":
+      return "penonaktifan wallet";
+  }
+}
 
-  return (
-    categories.find((category) => category.name.toLowerCase() === normalized) ??
-    categories.find((category) => normalized.includes(category.name.toLowerCase())) ??
-    categories.find((category) => {
-      const first = category.name.toLowerCase().split(/\s+/)[0];
-      return first.length > 3 && normalized.includes(first);
-    }) ??
-    null
-  );
+function walletChoices(wallets: Option[], kind: "from_wallet" | "to_wallet", excludeId?: string | null) {
+  return wallets
+    .filter((wallet) => wallet.id !== excludeId)
+    .slice(0, 5)
+    .map((wallet) => ({ label: wallet.name, value: wallet.id, kind }));
+}
+
+function sourceAccountChoices(accounts: Option[]) {
+  return accounts.slice(0, 5).map((account) => ({ label: account.name, value: account.id, kind: "source_account" as const }));
 }
 
 function categoryChoices(categories: Option[], guessedId: string | null): ChatChoice[] {
@@ -124,7 +207,15 @@ function categoryChoices(categories: Option[], guessedId: string | null): ChatCh
   return [guessed, ...extras]
     .filter((category): category is Option => Boolean(category))
     .slice(0, 3)
-    .map((category) => ({ label: category.name, categoryId: category.id }));
+    .map((category) => ({ label: category.name, value: category.id, kind: "category" as const }));
+}
+
+function digitsOnly(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return value.replace(/[^\d]/g, "") || null;
 }
 
 async function answerSpendingQuery(): Promise<string> {
@@ -136,6 +227,46 @@ async function answerSpendingQuery(): Promise<string> {
     .join(", ");
 
   return `${month.label}: saldo ${formatRupiah(dashboard.totalWalletBalance)}. Pengeluaran ${formatRupiah(dashboard.operationalExpense)}, top up ${formatRupiah(dashboard.monthlyTopUp)}. ${walletLines}. Mau catat yang baru?`;
+}
+
+async function answerFinanceQuestionDetail(
+  question: FinanceQuestion,
+  options: CatatOptions
+): Promise<ChatResponse> {
+  const month = getMonthContext();
+
+  switch (question.kind) {
+    case "week": {
+      if (!question.week) {
+        return emptyChat(await answerSpendingQuery());
+      }
+
+      return emptyChat(await answerWeekTotal(month, question.week));
+    }
+    case "person":
+      return emptyChat(await answerPersonTotal(month, question.person ?? "suami"));
+    case "list":
+      return emptyChat(await answerTransactionList(month, question.listTerm));
+    case "category": {
+      const category = question.categoryName
+        ? matchOptionByName(question.categoryName, options.categories)
+        : null;
+
+      if (!category) {
+        const dashboard = await getDashboardData(month);
+        const top = dashboard.categorySummaries
+          .slice(0, 3)
+          .map((summary) => `${summary.name} ${formatRupiah(summary.amount)}`)
+          .join(", ");
+
+        return emptyChat(`Kategori "${question.categoryName ?? "?"}" ga ada di daftar. Terbesar bulan ini: ${top}.`);
+      }
+
+      return emptyChat(await answerCategoryTotal(month, category.id, category.name));
+    }
+    default:
+      return emptyChat(await answerSpendingQuery());
+  }
 }
 
 async function createCategoryByName(name: string) {
@@ -175,7 +306,7 @@ async function createCategoryByName(name: string) {
 
 async function saveExpenseDraft(
   userId: string,
-  draft: ChatDraft,
+  draft: ExpenseDraft,
   wallets: Option[],
   categories: Option[]
 ) {
@@ -211,6 +342,751 @@ async function saveExpenseDraft(
   return `Sudah tercatat: ${draft.description || "Pengeluaran"} ${formatRupiah(Number(amount))} · ${categoryLabel} · ${walletName}.`;
 }
 
+// ---------------------------------------------------------------------------
+// Routers per intent
+// ---------------------------------------------------------------------------
+
+async function routeWalletCommand(command: WalletCommand, options: CatatOptions): Promise<ChatResponse> {
+  if (command.action === "create") {
+    if (!command.name) {
+      return emptyChat("Nama walletnya apa? Contoh: tambah wallet Dompet Suami.");
+    }
+
+    const cleaned = command.name.replace(/\s+/g, " ").trim();
+    const existing = await prisma.wallet.findUnique({
+      where: { name: cleaned },
+      select: { isActive: true }
+    });
+
+    if (existing?.isActive) {
+      return emptyChat(`Wallet ${cleaned} sudah ada.`);
+    }
+
+    const balanceNote = command.initialBalanceDigits
+      ? ` dengan saldo awal ${formatRupiah(Number(command.initialBalanceDigits))}`
+      : "";
+
+    return {
+      reply: `Buat wallet ${cleaned}${balanceNote}?`,
+      pendingAction: { kind: "create_wallet", name: cleaned, initialBalance: command.initialBalanceDigits },
+      choices: []
+    };
+  }
+
+  if (!command.name) {
+    return emptyChat("Wallet yang mana yang mau dinonaktifin? Contoh: hapus wallet Dompet Suami.");
+  }
+
+  const candidates = options.wallets.filter((wallet) => {
+    const name = wallet.name.toLowerCase();
+    const needle = command.name!.toLowerCase();
+
+    return name.includes(needle) || needle.includes(name);
+  });
+
+  if (candidates.length === 0) {
+    return emptyChat(`Ga ada wallet aktif namanya "${command.name}".`);
+  }
+
+  if (candidates.length > 1) {
+    return {
+      reply: "Ada beberapa wallet yang cocok. Pilih yang mana?",
+      pendingAction: null,
+      choices: candidates.slice(0, 5).map((wallet) => ({
+        label: wallet.name,
+        value: JSON.stringify({ id: wallet.id, name: wallet.name }),
+        kind: "wallet" as const
+      }))
+    };
+  }
+
+  const wallet = candidates[0];
+
+  return {
+    reply: `Nonaktifkan ${wallet.name}? Transaksinya tetap aman di History.`,
+    pendingAction: { kind: "deactivate_wallet", walletId: wallet.id, name: wallet.name },
+    choices: []
+  };
+}
+
+async function routeDeleteCommand(command: DeleteCommand): Promise<ChatResponse> {
+  const currentMonth = getMonthContext();
+  const month = command.lastMonth ? getMonthContext(currentMonth.previousKey) : currentMonth;
+
+  if (!command.term && !command.amountDigits) {
+    return emptyChat(
+      "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin, sebut jenisnya: bersihin catatan gorengan."
+    );
+  }
+
+  let matches = await findTransactionMatches({
+    term: command.term,
+    amountDigits: command.amountDigits,
+    month,
+    take: BULK_DELETE_LIMIT
+  });
+
+  if (matches.totalCount === 0 && command.term && command.amountDigits) {
+    matches = await findTransactionMatches({ term: command.term, amountDigits: null, month, take: BULK_DELETE_LIMIT });
+  }
+
+  if (matches.totalCount === 0) {
+    return emptyChat(
+      `Ga ketemu catatan${command.term ? ` "${command.term}"` : ""} di ${month.label}. Cek History kalau mau cari manual.`
+    );
+  }
+
+  if (matches.totalCount === 1 || command.lastOnly) {
+    const row = matches.rows[0];
+    const prefix = command.lastOnly && matches.totalCount > 1 ? "Hapus yang terakhir: " : "Hapus ";
+
+    return {
+      reply: `${prefix}${row.label}?`,
+      pendingAction: {
+        kind: "delete_transactions",
+        transactionIds: [row.id],
+        summary: row.label
+      },
+      choices: []
+    };
+  }
+
+  const subject = command.term ? `"${command.term}"` : "yang dicari";
+
+  if (command.bulk) {
+    if (matches.totalCount > BULK_DELETE_LIMIT) {
+      return emptyChat(
+        `Ketemu ${matches.totalCount} catatan ${subject} — kebanyakan buat dihapus sekaligus dari chat (maksimal ${BULK_DELETE_LIMIT}). Lewat History ya.`
+      );
+    }
+
+    return {
+      reply: `Ketemu ${matches.totalCount} catatan ${subject}, total ${formatRupiah(matches.totalAmount)}. Hapus semuanya?`,
+      pendingAction: {
+        kind: "delete_transactions",
+        transactionIds: matches.rows.map((row) => row.id),
+        summary: `${matches.totalCount} catatan ${subject}`
+      },
+      choices: []
+    };
+  }
+
+  const choices: ChatChoice[] = matches.rows
+    .slice(0, 5)
+    .map((row) => ({ label: row.label, value: row.id, kind: "transaction" as const }));
+
+  if (command.term) {
+    choices.push({
+      label: `Hapus semua (${matches.totalCount})`,
+      value: JSON.stringify({
+        term: command.term,
+        amountDigits: command.amountDigits,
+        lastMonth: command.lastMonth
+      }),
+      kind: "delete_all"
+    });
+  }
+
+  return {
+    reply: `Ketemu ${matches.totalCount} catatan ${subject} di ${month.label}. Pilih yang mana?`,
+    pendingAction: null,
+    choices
+  };
+}
+
+async function routeEditCommand(command: EditCommand, options: CatatOptions): Promise<ChatResponse> {
+  if (!command.term) {
+    return emptyChat("Edit catatan yang mana? Contoh: edit gorengan jadi 10rb.");
+  }
+
+  const hasChanges = Boolean(
+    command.amountDigits || command.categoryName || command.walletName || command.description
+  );
+
+  if (!hasChanges) {
+    return emptyChat("Mau diubah jadi apa? Contoh: edit gorengan jadi 10rb, atau edit bawang kategorinya transport.");
+  }
+
+  const month = getMonthContext();
+  const matches = await findTransactionMatches({ term: command.term, amountDigits: null, month });
+
+  if (matches.totalCount === 0) {
+    return emptyChat(`Ga ketemu catatan "${command.term}" di ${month.label}.`);
+  }
+
+  if (matches.totalCount > 1) {
+    return emptyChat(
+      `Ketemu ${matches.totalCount} catatan "${command.term}". Sebut lebih spesifik biar ga salah ubah.`
+    );
+  }
+
+  const row = matches.rows[0];
+  const changes: TransactionEditChanges = {};
+
+  if (command.amountDigits) {
+    changes.amountDigits = command.amountDigits;
+  }
+
+  if (command.categoryName) {
+    const category = matchOptionByName(command.categoryName, options.categories);
+
+    if (!category) {
+      return emptyChat(`Kategori "${command.categoryName}" ga ada. Tambah dulu atau pilih yang sudah ada.`);
+    }
+
+    changes.categoryId = category.id;
+  }
+
+  if (command.walletName) {
+    const wallet = matchOptionByName(command.walletName, options.wallets);
+
+    if (!wallet) {
+      return emptyChat(`Wallet "${command.walletName}" ga ada.`);
+    }
+
+    changes.walletId = wallet.id;
+  }
+
+  if (command.description) {
+    changes.description = command.description;
+  }
+
+  const parts: string[] = [];
+
+  if (changes.amountDigits) {
+    parts.push(`nominal jadi ${formatRupiah(Number(changes.amountDigits))}`);
+  }
+
+  if (changes.categoryId) {
+    const name = options.categories.find((category) => category.id === changes.categoryId)?.name;
+    parts.push(`kategori jadi ${name ?? "-"}`);
+  }
+
+  if (changes.walletId) {
+    const name = options.wallets.find((wallet) => wallet.id === changes.walletId)?.name;
+    parts.push(`wallet jadi ${name ?? "-"}`);
+  }
+
+  if (changes.description) {
+    parts.push(`catatan jadi "${changes.description}"`);
+  }
+
+  return {
+    reply: `Ubah ${row.label} — ${parts.join(", ")}?`,
+    pendingAction: {
+      kind: "edit_transaction",
+      transactionId: row.id,
+      label: row.label,
+      changes
+    },
+    choices: []
+  };
+}
+
+async function completeTopUpDraft(
+  amountDigits: string,
+  walletId: string | null,
+  sourceAccountId: string | null,
+  description: string | null,
+  options: CatatOptions
+): Promise<ChatResponse> {
+  const amount = new Intl.NumberFormat("id-ID").format(Number(amountDigits));
+  const draft = { amount: amountDigits, walletId, sourceAccountId, description };
+  const walletName = options.wallets.find((wallet) => wallet.id === walletId)?.name;
+  const sourceName = options.sourceAccounts.find((account) => account.id === sourceAccountId)?.name;
+
+  if (!walletId) {
+    return {
+      reply: `Top up ${amount} ke wallet mana?`,
+      pendingAction: { kind: "save_top_up", draft },
+      choices: walletChoices(options.wallets, "to_wallet")
+    };
+  }
+
+  if (!sourceAccountId) {
+    return {
+      reply: `Top up ${amount} ke ${walletName} dari sumber dana mana?`,
+      pendingAction: { kind: "save_top_up", draft },
+      choices: sourceAccountChoices(options.sourceAccounts)
+    };
+  }
+
+  return {
+    reply: `Top up ${amount} ke ${walletName} dari ${sourceName}?`,
+    pendingAction: { kind: "save_top_up", draft },
+    choices: []
+  };
+}
+
+async function completeTransferDraft(
+  amountDigits: string,
+  fromWalletId: string | null,
+  toWalletId: string | null,
+  description: string | null,
+  options: CatatOptions
+): Promise<ChatResponse> {
+  const amount = new Intl.NumberFormat("id-ID").format(Number(amountDigits));
+  const draft = { amount: amountDigits, fromWalletId, toWalletId, description };
+  const fromName = options.wallets.find((wallet) => wallet.id === fromWalletId)?.name;
+  const toName = options.wallets.find((wallet) => wallet.id === toWalletId)?.name;
+
+  if (!fromWalletId) {
+    return {
+      reply: `Transfer ${amount} dari wallet mana?`,
+      pendingAction: { kind: "save_transfer", draft },
+      choices: walletChoices(options.wallets, "from_wallet")
+    };
+  }
+
+  if (!toWalletId) {
+    return {
+      reply: `Transfer ${amount} dari ${fromName} ke wallet mana?`,
+      pendingAction: { kind: "save_transfer", draft },
+      choices: walletChoices(options.wallets, "to_wallet", fromWalletId)
+    };
+  }
+
+  if (fromWalletId === toWalletId) {
+    return emptyChat("Wallet asal dan tujuan harus beda. Contoh: transfer 100rb dari kas ke tabungan.");
+  }
+
+  return {
+    reply: `Transfer ${amount} dari ${fromName} ke ${toName}?`,
+    pendingAction: { kind: "save_transfer", draft },
+    choices: []
+  };
+}
+
+async function routeTransferIntent(intent: TransferIntent, options: CatatOptions): Promise<ChatResponse> {
+  if (!intent.amountDigits) {
+    return emptyChat(
+      intent.type === "top_up"
+        ? "Nominal top up-nya berapa? Contoh: top up 50rb dari BCA ke Kas."
+        : "Nominal transfer-nya berapa? Contoh: transfer 100rb dari kas ke tabungan."
+    );
+  }
+
+  if (intent.type === "top_up") {
+    const wallet = intent.toName ? matchOptionByName(intent.toName, options.wallets) : null;
+    const sourceAccount = intent.fromName ? matchOptionByName(intent.fromName, options.sourceAccounts) : null;
+
+    if (intent.fromName && !sourceAccount) {
+      return emptyChat(
+        `Sumber dana "${intent.fromName}" ga ada di daftar. Yang tersedia: ${options.sourceAccounts
+          .slice(0, 5)
+          .map((account) => account.name)
+          .join(", ")}.`
+      );
+    }
+
+    return completeTopUpDraft(intent.amountDigits, wallet?.id ?? null, sourceAccount?.id ?? null, null, options);
+  }
+
+  const from = intent.fromName ? matchOptionByName(intent.fromName, options.wallets) : null;
+  const to = intent.toName ? matchOptionByName(intent.toName, options.wallets) : null;
+
+  if (intent.fromName && !from) {
+    return emptyChat(`Wallet "${intent.fromName}" ga ada. Wallet aktif: ${options.wallets.map((wallet) => wallet.name).join(", ")}.`);
+  }
+
+  return completeTransferDraft(intent.amountDigits, from?.id ?? null, to?.id ?? null, null, options);
+}
+
+async function routeParsedDraft(
+  userId: string,
+  parsed: ParsedCatatDraft,
+  options: CatatOptions
+): Promise<ChatResponse> {
+  if (parsed.intent === "finance") {
+    if (parsed.finance && parsed.finance.kind !== "balance") {
+      return answerFinanceQuestionDetail(parsed.finance, options);
+    }
+
+    return emptyChat(parsed.reply ?? (await answerSpendingQuery()));
+  }
+
+  if (parsed.intent === "chat" && parsed.reply && !parsed.amount) {
+    return emptyChat(parsed.reply);
+  }
+
+  if (parsed.intent === "manage_category" && parsed.newCategoryName) {
+    const created = await createCategoryByName(parsed.newCategoryName);
+
+    if (created.category) {
+      return emptyChat(parsed.reply ?? `Kategori ${created.category.name} sudah ditambah.`);
+    }
+
+    return emptyChat(created.error ?? "Kategori belum bisa ditambah.");
+  }
+
+  if (parsed.intent === "manage_wallet") {
+    return routeWalletCommand(
+      {
+        action: parsed.walletAction ?? "create",
+        name: parsed.walletName,
+        initialBalanceDigits: parsed.initialBalance
+      },
+      options
+    );
+  }
+
+  if (parsed.intent === "delete_transaction") {
+    return routeDeleteCommand({
+      term: parsed.deleteTerm,
+      bulk: parsed.deleteBulk,
+      lastOnly: false,
+      lastMonth: false,
+      amountDigits: digitsOnly(parsed.amount)
+    });
+  }
+
+  if (parsed.intent === "edit_transaction") {
+    return routeEditCommand(
+      {
+        term: parsed.editTerm,
+        amountDigits: parsed.editAmount,
+        categoryName: parsed.editCategoryName,
+        walletName: parsed.editWalletName,
+        description: null
+      },
+      options
+    );
+  }
+
+  const amountDigits = digitsOnly(parsed.amount);
+
+  if (parsed.type === "top_up" && amountDigits) {
+    return completeTopUpDraft(amountDigits, parsed.walletId, parsed.sourceAccountId, parsed.description, options);
+  }
+
+  if (parsed.type === "transfer" && amountDigits) {
+    return completeTransferDraft(amountDigits, parsed.fromWalletId, parsed.toWalletId, parsed.description, options);
+  }
+
+  if (!amountDigits || !parsed.walletId || !parsed.categoryId) {
+    return emptyChat(
+      parsed.reply ??
+        parsed.error ??
+        "Bisa. Catat uang, tanya resep, obat rumah, atau saldo. Kalau catat, kasih nominalnya."
+    );
+  }
+
+  const draft: ExpenseDraft = {
+    amount: amountDigits,
+    walletId: parsed.walletId,
+    categoryId: parsed.categoryId,
+    description: parsed.description ?? ""
+  };
+
+  const categoryLabel = options.categories.find((category) => category.id === draft.categoryId)?.name ?? "kategori";
+  const money = formatRupiah(Number(draft.amount));
+  const item = draft.description || "Pengeluaran";
+
+  if (parsed.needsConfirmation || parsed.intent === "clarify") {
+    return {
+      reply: parsed.reply ?? `${item} ${money}. Ini ${categoryLabel} ya? Kalau bukan, pilih di bawah.`,
+      pendingAction: { kind: "save_expense", draft },
+      choices: categoryChoices(options.categories, draft.categoryId)
+    };
+  }
+
+  const reply = await saveExpenseDraft(userId, draft, options.wallets, options.categories);
+  return { reply, pendingAction: null, choices: [] };
+}
+
+// ---------------------------------------------------------------------------
+// Picked choice + pending execution
+// ---------------------------------------------------------------------------
+
+async function applyPickedChoice(
+  userId: string,
+  pending: ChatPendingAction | null,
+  picked: PickedChoice,
+  options: CatatOptions
+): Promise<ChatResponse> {
+  switch (picked.kind) {
+    case "category": {
+      if (pending?.kind === "save_expense") {
+        const draft: ExpenseDraft = { ...pending.draft, categoryId: picked.value };
+        const reply = await saveExpenseDraft(userId, draft, options.wallets, options.categories);
+        return { reply, pendingAction: null, choices: [] };
+      }
+
+      return emptyChat("Catat dulu pengeluarannya, baru pilih kategori.");
+    }
+    case "transaction": {
+      const match = await getTransactionMatchById(picked.value);
+
+      if (!match) {
+        return emptyChat("Catatannya kayaknya udah kehapus sebelumnya.");
+      }
+
+      return {
+        reply: `Hapus ${match.label}?`,
+        pendingAction: { kind: "delete_transactions", transactionIds: [match.id], summary: match.label },
+        choices: []
+      };
+    }
+    case "delete_all": {
+      let scope: { term: string | null; amountDigits: string | null; lastMonth: boolean };
+
+      try {
+        scope = JSON.parse(picked.value) as typeof scope;
+      } catch {
+        return emptyChat("Pilihannya ga valid. Coba sebut ulang: bersihin catatan gorengan.");
+      }
+
+      const currentMonth = getMonthContext();
+      const month = scope.lastMonth ? getMonthContext(currentMonth.previousKey) : currentMonth;
+      const matches = await findTransactionMatches({
+        term: scope.term,
+        amountDigits: scope.amountDigits,
+        month,
+        take: BULK_DELETE_LIMIT
+      });
+
+      if (matches.totalCount === 0) {
+        return emptyChat("Daftar catatannya berubah, ga ada yang bisa dihapus sekarang.");
+      }
+
+      if (matches.totalCount > BULK_DELETE_LIMIT) {
+        return emptyChat(`Sekarang ketemu ${matches.totalCount} — kebanyakan. Lewat History ya.`);
+      }
+
+      return {
+        reply: `Hapus ${matches.totalCount} catatan (total ${formatRupiah(matches.totalAmount)})?`,
+        pendingAction: {
+          kind: "delete_transactions",
+          transactionIds: matches.rows.map((row) => row.id),
+          summary: `${matches.totalCount} catatan`
+        },
+        choices: []
+      };
+    }
+    case "source_account": {
+      if (pending?.kind === "save_top_up" && pending.draft.walletId) {
+        const result = await saveTopUpDraft(userId, {
+          amount: pending.draft.amount,
+          walletId: pending.draft.walletId,
+          sourceAccountId: picked.value,
+          description: pending.draft.description
+        });
+
+        return result.error
+          ? { reply: result.error, pendingAction: pending, choices: [] }
+          : { reply: result.message, pendingAction: null, choices: [] };
+      }
+
+      return emptyChat("Draft top up-nya belum ada. Sebut ulang: top up 50rb dari BCA ke Kas.");
+    }
+    case "from_wallet": {
+      if (pending?.kind === "save_transfer") {
+        return completeTransferDraft(
+          pending.draft.amount,
+          picked.value,
+          pending.draft.toWalletId,
+          pending.draft.description,
+          options
+        );
+      }
+
+      return emptyChat("Draft transfernya belum ada. Contoh: transfer 100rb dari kas ke tabungan.");
+    }
+    case "to_wallet": {
+      if (pending?.kind === "save_transfer") {
+        return completeTransferDraft(
+          pending.draft.amount,
+          pending.draft.fromWalletId,
+          picked.value,
+          pending.draft.description,
+          options
+        );
+      }
+
+      if (pending?.kind === "save_top_up") {
+        return completeTopUpDraft(
+          pending.draft.amount,
+          picked.value,
+          pending.draft.sourceAccountId,
+          pending.draft.description,
+          options
+        );
+      }
+
+      return emptyChat("Draftnya belum ada. Contoh: top up 50rb dari BCA ke Kas.");
+    }
+    case "wallet": {
+      try {
+        const info = JSON.parse(picked.value) as { id: string; name: string };
+
+        return {
+          reply: `Nonaktifkan ${info.name}? Transaksinya tetap aman di History.`,
+          pendingAction: { kind: "deactivate_wallet", walletId: info.id, name: info.name },
+          choices: []
+        };
+      } catch {
+        return emptyChat("Pilihannya ga valid.");
+      }
+    }
+    case "retry": {
+      return emptyChat("Tekan kirim ulang pertanyaannya ya, koneksi tadi sempat putus.");
+    }
+  }
+}
+
+async function executePendingAction(
+  userId: string,
+  pending: ChatPendingAction
+): Promise<ChatResponse> {
+  switch (pending.kind) {
+    case "save_expense": {
+      const options = await loadCatatOptions();
+      const reply = await saveExpenseDraft(userId, pending.draft, options.wallets, options.categories);
+      return { reply, pendingAction: null, choices: [] };
+    }
+    case "save_top_up": {
+      if (!pending.draft.walletId || !pending.draft.sourceAccountId) {
+        return {
+          reply: "Data top up-nya belum lengkap. Sebut ulang, contoh: top up 50rb dari BCA ke Kas.",
+          pendingAction: pending,
+          choices: []
+        };
+      }
+
+      const result = await saveTopUpDraft(userId, {
+        amount: pending.draft.amount,
+        walletId: pending.draft.walletId,
+        sourceAccountId: pending.draft.sourceAccountId,
+        description: pending.draft.description
+      });
+
+      return result.error
+        ? { reply: result.error, pendingAction: pending, choices: [] }
+        : { reply: result.message, pendingAction: null, choices: [] };
+    }
+    case "save_transfer": {
+      if (!pending.draft.fromWalletId || !pending.draft.toWalletId) {
+        return {
+          reply: "Data transfernya belum lengkap. Sebut ulang, contoh: transfer 100rb dari kas ke tabungan.",
+          pendingAction: pending,
+          choices: []
+        };
+      }
+
+      const result = await saveTransferDraft(userId, {
+        amount: pending.draft.amount,
+        fromWalletId: pending.draft.fromWalletId,
+        toWalletId: pending.draft.toWalletId,
+        description: pending.draft.description
+      });
+
+      return result.error
+        ? { reply: result.error, pendingAction: pending, choices: [] }
+        : { reply: result.message, pendingAction: null, choices: [] };
+    }
+    case "delete_transactions": {
+      const count = await softDeleteTransactions(userId, pending.transactionIds);
+
+      return {
+        reply:
+          count > 0
+            ? `Terhapus ${count} catatan: ${pending.summary}. Salah hapus? Pulihkan dari History → Terhapus.`
+            : "Catatannya kayaknya udah kehapus sebelumnya.",
+        pendingAction: null,
+        choices: []
+      };
+    }
+    case "edit_transaction": {
+      const result = await applyTransactionEdit(userId, pending.transactionId, pending.changes);
+
+      return result.error
+        ? { reply: result.error, pendingAction: pending, choices: [] }
+        : { reply: result.message, pendingAction: null, choices: [] };
+    }
+    case "create_wallet": {
+      const result = await createChatWallet(pending.name, pending.initialBalance);
+
+      return result.error
+        ? { reply: result.error, pendingAction: pending, choices: [] }
+        : { reply: result.message, pendingAction: null, choices: [] };
+    }
+    case "deactivate_wallet": {
+      const result = await deactivateChatWallet(pending.walletId);
+
+      return result.error
+        ? { reply: result.error, pendingAction: pending, choices: [] }
+        : { reply: result.message, pendingAction: null, choices: [] };
+    }
+  }
+}
+
+async function routeNewIntent(
+  userId: string,
+  text: string,
+  options: CatatOptions,
+  history: ChatHistoryTurn[]
+): Promise<ChatResponse> {
+  const lower = text.toLowerCase();
+
+  const walletCommand = parseWalletCommand(lower);
+
+  if (walletCommand) {
+    return routeWalletCommand(walletCommand, options);
+  }
+
+  const deleteCommand = parseDeleteCommand(lower);
+
+  if (deleteCommand) {
+    return routeDeleteCommand(deleteCommand);
+  }
+
+  const editCommand = parseEditCommand(lower);
+
+  if (editCommand) {
+    return routeEditCommand(editCommand, options);
+  }
+
+  const transferIntent = parseTransferIntent(lower);
+
+  if (transferIntent) {
+    return routeTransferIntent(transferIntent, options);
+  }
+
+  if (isAddCategory(text)) {
+    const created = await createCategoryByName(categoryNameFromAddCommand(text));
+
+    if (created.category) {
+      return emptyChat(`Kategori ${created.category.name} sudah saya tambah. Mau dipakai catat yang mana?`);
+    }
+
+    return emptyChat(created.error ?? "Kategori belum bisa ditambah.");
+  }
+
+  const financeQuestion = parseFinanceQuestion(text, options.categories);
+
+  if (financeQuestion) {
+    return answerFinanceQuestionDetail(financeQuestion, options);
+  }
+
+  if (isSpendingQuery(text)) {
+    return emptyChat(await answerSpendingQuery());
+  }
+
+  const parsed = await resolveCatatDraft({
+    prompt: text,
+    wallets: options.wallets,
+    categories: options.categories,
+    sourceAccounts: options.sourceAccounts,
+    history
+  });
+
+  return routeParsedDraft(userId, parsed, options);
+}
+
+// ---------------------------------------------------------------------------
+// Public actions
+// ---------------------------------------------------------------------------
+
 export async function loadCatatChatHistoryAction(): Promise<ChatHistoryTurn[]> {
   const currentUser = await requireUser();
   return loadChatHistory(currentUser.id);
@@ -241,12 +1117,13 @@ export async function getChatGreetingAction() {
           ? `Sore, ${name}.`
           : `Malam, ${name}.`;
 
-  return `${hello} Ada yang mau dicatat, ditanya resep, obat, atau cek keuangan?`;
+  return `${hello} Mau catat, hapus atau edit catatan, cek saldo, top up, atau kelola wallet?`;
 }
 
 export async function sendCatatChatAction(
   prompt: string,
-  confirmDraft?: ChatDraft | null,
+  pendingAction?: ChatPendingAction | null,
+  picked?: PickedChoice | null,
   history: ChatHistoryTurn[] = []
 ): Promise<ChatResponse> {
   const currentUser = await requireUser();
@@ -260,109 +1137,39 @@ export async function sendCatatChatAction(
     return response;
   }
 
-  if (text.length < 1 && !confirmDraft) {
-    return rememberTurn(emptyChat("Tulis pengeluaran, atau tanya saldo. Contoh: gorengan 5k, bawang 8rb, saldo bulan ini."));
-  }
-
-  const { wallets, categories } = await loadCatatOptions();
-
-  if (confirmDraft) {
-    if (!text || isAffirmative(text) || text === "ok") {
-      const reply = await saveExpenseDraft(currentUser.id, confirmDraft, wallets, categories);
-      return rememberTurn({ reply, saved: true, draft: null, needsConfirmation: false, choices: [] });
-    }
-
-    const picked = matchCategory(text, categories);
-
-    if (picked) {
-      const reply = await saveExpenseDraft(
-        currentUser.id,
-        { ...confirmDraft, categoryId: picked.id },
-        wallets,
-        categories
-      );
-      return rememberTurn({ reply, saved: true, draft: null, needsConfirmation: false, choices: [] });
-    }
-
-    if (isAddCategory(text)) {
-      const created = await createCategoryByName(categoryNameFromAddCommand(text) || text);
-      if (created.category) {
-        const reply = await saveExpenseDraft(
-          currentUser.id,
-          { ...confirmDraft, categoryId: created.category.id },
-          wallets,
-          [...categories, created.category]
-        );
-        return rememberTurn({ reply, saved: true, draft: null, needsConfirmation: false, choices: [] });
-      }
-
-      return rememberTurn(emptyChat(created.error ?? "Kategori belum bisa ditambah."));
-    }
-  }
-
-  if (isAddCategory(text)) {
-    const created = await createCategoryByName(categoryNameFromAddCommand(text));
-    if (created.category) {
-      return rememberTurn(emptyChat(`Kategori ${created.category.name} sudah saya tambah. Mau dipakai catat yang mana?`));
-    }
-
-    return rememberTurn(emptyChat(created.error ?? "Kategori belum bisa ditambah."));
-  }
-
-  if (isSpendingQuery(text)) {
-    return rememberTurn(emptyChat(await answerSpendingQuery()));
-  }
-
-  const parsed = await resolveCatatDraft({ prompt: text, wallets, categories, history });
-
-  if (parsed.intent === "finance") {
-    return rememberTurn(emptyChat(parsed.reply ?? (await answerSpendingQuery())));
-  }
-
-  if (parsed.intent === "chat" && parsed.reply && !parsed.amount) {
-    return rememberTurn(emptyChat(parsed.reply));
-  }
-
-  if (parsed.intent === "manage_category" && parsed.newCategoryName) {
-    const created = await createCategoryByName(parsed.newCategoryName);
-    if (created.category) {
-      return rememberTurn(emptyChat(parsed.reply ?? `Kategori ${created.category.name} sudah ditambah.`));
-    }
-
-    return rememberTurn(emptyChat(created.error ?? "Kategori belum bisa ditambah."));
-  }
-
-  const draft = draftFromParsed(parsed);
-
-  if (!draft) {
+  if (!text && !picked) {
     return rememberTurn(
-      emptyChat(
-        parsed.reply ??
-          parsed.error ??
-          "Bisa. Catat uang, tanya resep, obat rumah, atau saldo. Kalau catat, kasih nominalnya."
-      )
+      emptyChat("Tulis pengeluaran, tanya saldo, atau hapus catatan. Contoh: gorengan 5k, saldo istri, hapus gorengan tadi.")
     );
   }
 
-  const categoryLabel = categories.find((category) => category.id === draft.categoryId)?.name ?? "kategori";
-  const money = formatRupiah(Number(draft.amount.replace(/[^\d]/g, "")));
-  const item = draft.description || "Pengeluaran";
+  const options = await loadCatatOptions();
 
-  if (parsed.needsConfirmation || parsed.intent === "clarify") {
-    const choices = categoryChoices(categories, draft.categoryId);
-    const reply =
-      parsed.reply ??
-      `${item} ${money}. Ini ${categoryLabel} ya? Kalau bukan, pilih di bawah.`;
+  if (picked) {
+    return rememberTurn(await applyPickedChoice(currentUser.id, pendingAction ?? null, picked, options));
+  }
+
+  if (pendingAction) {
+    if (isCancel(text)) {
+      return rememberTurn(emptyChat("Oke, dibatalin."));
+    }
+
+    if (isAffirmative(text)) {
+      return rememberTurn(await executePendingAction(currentUser.id, pendingAction));
+    }
+
+    const fresh = await routeNewIntent(currentUser.id, text, options, history);
+
+    if (fresh.pendingAction) {
+      return rememberTurn(fresh);
+    }
 
     return rememberTurn({
-      reply,
-      saved: false,
-      draft,
-      needsConfirmation: true,
-      choices
+      reply: `Masih ada ${describePending(pendingAction)} yang nunggu konfirmasi. "Ya" buat lanjut, "batal" buat batalin.`,
+      pendingAction,
+      choices: []
     });
   }
 
-  const reply = await saveExpenseDraft(currentUser.id, draft, wallets, categories);
-  return rememberTurn({ reply, saved: true, draft: null, needsConfirmation: false, choices: [] });
+  return rememberTurn(await routeNewIntent(currentUser.id, text, options, history));
 }
