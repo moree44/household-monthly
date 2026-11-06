@@ -53,6 +53,26 @@ export async function clearSession() {
 type SessionUser = Pick<User, "id" | "username" | "displayName" | "role" | "isActive">;
 
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
+  // Dev-only autologin: aktif hanya kalau DEV_AUTOLOGIN=true di env lokal
+  // DAN bukan production. Di Vercel (NODE_ENV=production) bypass ini mati total.
+  if (process.env.NODE_ENV !== "production" && process.env.DEV_AUTOLOGIN === "true") {
+    const username = process.env.DEV_AUTOLOGIN_USERNAME?.trim() || "suami";
+    const devUser = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        role: true,
+        isActive: true
+      }
+    });
+
+    if (devUser?.isActive) {
+      return devUser;
+    }
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
