@@ -375,10 +375,10 @@ async function saveExpenseDraft(
 // Routers per intent
 // ---------------------------------------------------------------------------
 
-async function routeWalletCommand(command: WalletCommand, options: CatatOptions): Promise<ChatResponse> {
+async function routeWalletCommand(command: WalletCommand, options: CatatOptions): Promise<GateOutcome> {
   if (command.action === "create") {
     if (!command.name) {
-      return emptyChat("Nama walletnya apa? Contoh: tambah wallet Dompet Suami.");
+      return gateMissed(emptyChat("Nama walletnya apa? Contoh: tambah wallet Dompet Suami."));
     }
 
     const cleaned = command.name.replace(/\s+/g, " ").trim();
@@ -388,22 +388,24 @@ async function routeWalletCommand(command: WalletCommand, options: CatatOptions)
     });
 
     if (existing?.isActive) {
-      return emptyChat(`Wallet ${cleaned} sudah ada.`);
+      return gateMatched(emptyChat(`Wallet ${cleaned} sudah ada.`));
     }
 
     const balanceNote = command.initialBalanceDigits
       ? ` dengan saldo awal ${formatRupiah(Number(command.initialBalanceDigits))}`
       : "";
 
-    return {
+    return gateMatched({
       reply: `Buat wallet ${cleaned}${balanceNote}?`,
       pendingAction: { kind: "create_wallet", name: cleaned, initialBalance: command.initialBalanceDigits },
       choices: []
-    };
+    });
   }
 
   if (!command.name) {
-    return emptyChat("Wallet yang mana yang mau dinonaktifin? Contoh: hapus wallet Dompet Suami.");
+    return gateMissed(
+      emptyChat("Wallet yang mana yang mau dinonaktifin? Contoh: hapus wallet Dompet Suami.")
+    );
   }
 
   const candidates = options.wallets.filter((wallet) => {
@@ -414,11 +416,11 @@ async function routeWalletCommand(command: WalletCommand, options: CatatOptions)
   });
 
   if (candidates.length === 0) {
-    return emptyChat(`Ga ada wallet aktif namanya "${command.name}".`);
+    return gateMissed(emptyChat(`Ga ada wallet aktif namanya "${command.name}".`));
   }
 
   if (candidates.length > 1) {
-    return {
+    return gateMatched({
       reply: "Ada beberapa wallet yang cocok. Pilih yang mana?",
       pendingAction: null,
       choices: candidates.slice(0, 5).map((wallet) => ({
@@ -426,16 +428,16 @@ async function routeWalletCommand(command: WalletCommand, options: CatatOptions)
         value: JSON.stringify({ id: wallet.id, name: wallet.name }),
         kind: "wallet" as const
       }))
-    };
+    });
   }
 
   const wallet = candidates[0];
 
-  return {
+  return gateMatched({
     reply: `Nonaktifkan ${wallet.name}? Transaksinya tetap aman di History.`,
     pendingAction: { kind: "deactivate_wallet", walletId: wallet.id, name: wallet.name },
     choices: []
-  };
+  });
 }
 
 async function routeDeleteCommand(
@@ -484,7 +486,7 @@ async function routeDeleteCommand(
     }
 
     if (!command.bulk) {
-      return gateMatched(
+      return gateMissed(
         emptyChat(
           "Hapus yang mana? Sebut namanya, contoh: hapus gorengan tadi. Kalau mau bersihin semuanya: hapus semua transaksi bulan ini. Atau reset wallet: bersihkan dompet istri."
         )
@@ -494,7 +496,7 @@ async function routeDeleteCommand(
     const all = await findTransactionMatches({ term: null, amountDigits: null, month, take: BULK_DELETE_LIMIT });
 
     if (all.totalCount === 0) {
-      return gateMatched(
+      return gateMissed(
         emptyChat(
           `Sudah bersih, ga ada transaksi di ${month.label}. Kalau maksudnya reset saldo wallet, sebut namanya: bersihkan kas rumah tangga.`
         )
@@ -602,7 +604,7 @@ async function routeDeleteCommand(
 
 async function routeEditCommand(command: EditCommand, options: CatatOptions): Promise<GateOutcome> {
   if (!command.term) {
-    return gateMatched(emptyChat("Edit catatan yang mana? Contoh: edit gorengan jadi 10rb."));
+    return gateMissed(emptyChat("Edit catatan yang mana? Contoh: edit gorengan jadi 10rb."));
   }
 
   const hasChanges = Boolean(
@@ -610,7 +612,7 @@ async function routeEditCommand(command: EditCommand, options: CatatOptions): Pr
   );
 
   if (!hasChanges) {
-    return gateMatched(
+    return gateMissed(
       emptyChat("Mau diubah jadi apa? Contoh: edit gorengan jadi 10rb, atau edit bawang kategorinya transport.")
     );
   }
@@ -832,14 +834,16 @@ async function routeParsedDraft(
   }
 
   if (parsed.intent === "manage_wallet") {
-    return routeWalletCommand(
-      {
-        action: parsed.walletAction ?? "create",
-        name: parsed.walletName,
-        initialBalanceDigits: parsed.initialBalance
-      },
-      options
-    );
+    return (
+      await routeWalletCommand(
+        {
+          action: parsed.walletAction ?? "create",
+          name: parsed.walletName,
+          initialBalanceDigits: parsed.initialBalance
+        },
+        options
+      )
+    ).response;
   }
 
   if (parsed.intent === "delete_transaction") {
@@ -1212,7 +1216,13 @@ async function routeNewIntent(
   const walletCommand = parseWalletCommand(lower);
 
   if (walletCommand) {
-    return routeWalletCommand(walletCommand, options);
+    const outcome = await routeWalletCommand(walletCommand, options);
+
+    if (outcome.matched) {
+      return outcome.response;
+    }
+
+    return (await arbitrateWithAi(userId, text, options, history)) ?? outcome.response;
   }
 
   const deleteCommand = parseDeleteCommand(lower);
