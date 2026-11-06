@@ -5,8 +5,8 @@ import {
   History,
   Home,
   Landmark,
-  MessageCircle,
   Plus,
+  Sparkles,
   Target
 } from "lucide-react";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", match: "/dashboard", label: "Home", icon: Home },
   { href: "/history", match: "/history", label: "History", icon: History },
-  { href: "/chat", match: "/chat", label: "Chat AI", icon: MessageCircle },
+  { href: "/chat", match: "/chat", label: "Chat AI", icon: Sparkles },
   { href: "/goals", match: "/goals", label: "Goals", icon: Target },
   { href: "/wealth", match: "/wealth", label: "Kekayaan", icon: Landmark },
   { href: "/profile", match: "/profile", label: "Profil", icon: CircleUserRound }

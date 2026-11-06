@@ -34,10 +34,10 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
       <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[24px] bg-[#171717] px-5 py-3 shadow-xl shadow-black/20 wide:hidden">
         <div className="grid h-full grid-cols-5 items-center">
           <Link href={dashboardHref} prefetch className={itemClass("home")} style={itemStyle("home")} aria-label="Home">
-            <Home size={20} strokeWidth={1.8} />
+            <Home size={22} strokeWidth={1.8} />
           </Link>
           <Link href={historyHref} prefetch className={itemClass("history")} style={itemStyle("history")} aria-label="History">
-            <History size={20} strokeWidth={1.8} />
+            <History size={22} strokeWidth={1.8} />
           </Link>
           <Link href="/expenses/new" prefetch className={cn("relative", itemClass("catat"))} style={itemStyle("catat")} aria-label="Catat">
             <span className="absolute -top-8 grid h-14 w-14 place-items-center rounded-full border-4 border-[#171717] bg-blue-500 text-white shadow-lg shadow-blue-500/30">
@@ -45,10 +45,10 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
             </span>
           </Link>
           <Link href="/goals" prefetch className={itemClass("goals")} style={itemStyle("goals")} aria-label="Goals">
-            <Target size={20} strokeWidth={1.8} />
+            <Target size={22} strokeWidth={1.8} />
           </Link>
           <Link href="/profile" prefetch className={itemClass("profile")} style={itemStyle("profile")} aria-label="Profil">
-            <CircleUserRound size={20} strokeWidth={1.8} />
+            <CircleUserRound size={22} strokeWidth={1.8} />
           </Link>
         </div>
       </nav>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ChatPanel } from "@/features/transactions/components/chat-sheet";
 
@@ -24,11 +24,11 @@ export function ChatDock() {
       <button
         type="button"
         onClick={openChat}
-        className="fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-blue-500 text-white shadow-lg shadow-blue-500/40 wide:hidden"
+        className="fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-[#171717] text-white shadow-lg shadow-black/30 wide:hidden"
         style={{ bottom: "calc(7.25rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Chat AI"
       >
-        <MessageCircle size={22} strokeWidth={2} />
+        <Sparkles size={22} strokeWidth={1.9} />
       </button>
 
       {open ? (
