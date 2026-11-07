@@ -31,7 +31,7 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
       <DesktopSidebar />
       <ChatDock />
       <div className="h-[calc(8.75rem+env(safe-area-inset-bottom,0px))] wide:hidden" />
-      <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-[calc(100%-32px)] max-w-[398px] -translate-x-1/2 overflow-visible rounded-[26px] border border-white/5 bg-[#171717]/95 px-3 py-2.5 shadow-xl shadow-black/25 backdrop-blur wide:hidden">
+      <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-1/2 z-20 w-fit -translate-x-1/2 overflow-visible rounded-[26px] border border-white/5 bg-[#171717]/95 px-2.5 py-2.5 shadow-xl shadow-black/25 backdrop-blur wide:hidden">
         <div className="grid h-full grid-cols-5 items-center">
           <Link href={dashboardHref} prefetch className={itemClass("home")} style={itemStyle("home")} aria-label="Home">
             <Home size={22} strokeWidth={1.9} />
