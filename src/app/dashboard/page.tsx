@@ -44,10 +44,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const dashboard = await getDashboardData(month);
 
   const topCategories = dashboard.categorySummaries.slice(0, 4);
-  const wifeUsagePercent =
-    dashboard.wifeSummary.transferIn > 0
-      ? Math.min((dashboard.wifeSummary.expense / dashboard.wifeSummary.transferIn) * 100, 100)
-      : 0;
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
@@ -116,67 +112,36 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <span className="text-xs font-bold text-blue-600">Buka</span>
         </Link>
 
-        <div className="mt-5 grid gap-5 wide:grid-cols-2">
-          <section className="rounded-[18px] bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-[#171717]">Dompet Istri</h2>
-            <div className="mt-4 h-1 rounded-full bg-[#E5E5E5]">
-              <div
-                className="h-1 rounded-full bg-blue-500"
-                style={{
-                  width: `${wifeUsagePercent}%`
-                }}
-              />
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
-              <div>
-                <p className="text-[#737373]">terpakai</p>
-                <p className="mt-1 text-sm text-[#171717]">
-                  <PrivateAmount value={dashboard.wifeSummary.expense} />
-                </p>
-              </div>
-              <div>
-                <p className="text-[#737373]">saldo</p>
-                <p className="mt-1 text-sm text-[#171717]">
-                  <PrivateAmount value={dashboard.wifeSummary.balance} />
-                </p>
-              </div>
-              <div>
-                <p className="text-[#737373]">masuk</p>
-                <p className="mt-1 text-sm text-[#171717]">
-                  <PrivateAmount value={dashboard.wifeSummary.transferIn} />
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[18px] bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-[#171717]">Kategori</h2>
-            {topCategories.length > 0 ? (
-              <div className="mt-4 space-y-3">
-                {topCategories.map((category) => (
-                  <div key={category.id}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                      <span className="font-bold text-[#262626]">{category.name}</span>
-                      <span className="text-sm text-[#171717]">
-                        <PrivateAmount value={category.amount} />
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[#E5E5E5]">
-                      <div
-                        className="h-2 rounded-full bg-blue-500"
-                        style={{
-                          width: `${Math.min((category.amount / dashboard.maxCategoryAmount) * 100, 100)}%`
-                        }}
-                      />
-                    </div>
+        {/* Ringkasan Dompet Istri disembunyikan dulu (belum terpakai) —
+            data tetap tersedia di dashboard.wifeSummary, tinggal pasang lagi
+            kartu terpakai/saldo/masuk di sini kalau sudah dibutuhkan. */}
+        <section className="mt-5 rounded-[18px] bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-[#171717]">Kategori</h2>
+          {topCategories.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {topCategories.map((category) => (
+                <div key={category.id}>
+                  <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-bold text-[#262626]">{category.name}</span>
+                    <span className="text-sm text-[#171717]">
+                      <PrivateAmount value={category.amount} />
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-[#737373]">Belum ada pengeluaran.</p>
-            )}
-          </section>
-        </div>
+                  <div className="h-2 rounded-full bg-[#E5E5E5]">
+                    <div
+                      className="h-2 rounded-full bg-blue-500"
+                      style={{
+                        width: `${Math.min((category.amount / dashboard.maxCategoryAmount) * 100, 100)}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-[#737373]">Belum ada pengeluaran.</p>
+          )}
+        </section>
 
         <section className="mt-5">
           <div className="mb-3 flex items-center justify-between">
