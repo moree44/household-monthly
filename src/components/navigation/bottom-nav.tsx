@@ -40,7 +40,7 @@ export function BottomNav({ active, monthKey }: BottomNavProps) {
             <History size={22} strokeWidth={1.9} />
           </Link>
           <Link href="/expenses/new" prefetch className={cn("relative grid h-11 w-14 shrink-0 place-items-center", itemStyle("catat"))} aria-label="Catat">
-            <span className="absolute -top-7 grid h-14 w-14 place-items-center rounded-full border-4 border-[#171717] bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+            <span className="absolute -top-5 grid h-14 w-14 place-items-center rounded-full border-4 border-[#171717] bg-blue-500 text-white shadow-lg shadow-blue-500/30">
               <Plus size={24} strokeWidth={2} />
             </span>
           </Link>

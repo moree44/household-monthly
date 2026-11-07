@@ -24,11 +24,11 @@ export function ChatDock() {
       <button
         type="button"
         onClick={openChat}
-        className="fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-[#171717] text-white shadow-lg shadow-black/30 wide:hidden"
-        style={{ bottom: "calc(7.25rem + env(safe-area-inset-bottom, 0px))" }}
+        className="fixed right-4 z-40 grid h-12 w-12 place-items-center rounded-full bg-[#171717] text-white shadow-lg shadow-black/30 wide:hidden"
+        style={{ bottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}
         aria-label="Chat AI"
       >
-        <Sparkles size={22} strokeWidth={1.9} />
+        <Sparkles size={20} strokeWidth={1.9} />
       </button>
 
       {open ? (
