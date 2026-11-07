@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -77,6 +77,7 @@ function revalidateTransactionViews() {
   revalidatePath("/dashboard");
   revalidatePath("/history");
   revalidatePath("/profile");
+  updateTag("finance-data");
 }
 
 async function validateActiveExpenseReferences(walletId: string, categoryId: string) {

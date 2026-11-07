@@ -1,4 +1,5 @@
 import type { AssetKind, HoldingKind, TransactionType, Visibility, WalletType } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 
 function decimalToNumber(value: { toString(): string } | null | undefined) {
@@ -58,7 +59,7 @@ export type WealthAsset = {
   isActive: boolean;
 };
 
-export async function getWealthOverview(canSeePrivate: boolean) {
+async function loadWealthOverview(canSeePrivate: boolean) {
   const visibilityFilter: Visibility[] = canSeePrivate ? ["household", "private"] : ["household"];
 
   const [
@@ -204,4 +205,14 @@ export async function getWealthOverview(canSeePrivate: boolean) {
     assetTotal,
     netWorth: operationalTotal + holdingTotal + assetTotal
   };
+}
+
+// Overview kekayaan jarang berubah; cache dengan visibility sebagai bagian
+// kunci supaya admin dan member dapat tembolok masing-masing.
+export function getWealthOverview(canSeePrivate: boolean) {
+  return unstable_cache(
+    loadWealthOverview,
+    ["wealth-data", String(canSeePrivate)],
+    { tags: ["finance-data"], revalidate: 900 }
+  )(canSeePrivate);
 }

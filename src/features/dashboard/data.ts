@@ -1,4 +1,5 @@
 import type { TransactionType, WalletType } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import type { MonthContext } from "@/lib/date/month";
 
@@ -48,7 +49,7 @@ function signedWalletTransactionAmount({
   return 0;
 }
 
-export async function getDashboardData(month: MonthContext) {
+async function loadDashboardData(month: MonthContext) {
   const { start, end } = month;
 
   const [
@@ -378,4 +379,15 @@ export async function getDashboardData(month: MonthContext) {
       };
     })
   };
+}
+
+// Dashboard dibaca di tiap navigasi; cache per bulan memangkas belasan query
+// Prisma (paling terasa di Neon yang tiap query bayar RTT jaringan).
+// Cache di-bust lewat tag "finance-data" dari semua aksi mutasi.
+export function getDashboardData(month: MonthContext) {
+  return unstable_cache(
+    loadDashboardData,
+    ["dashboard-data", month.key],
+    { tags: ["finance-data"], revalidate: 900 }
+  )(month);
 }

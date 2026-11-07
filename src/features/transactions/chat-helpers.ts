@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { MonthContext } from "@/lib/date/month";
@@ -28,6 +28,7 @@ export function revalidateTransactionViews() {
   revalidatePath("/dashboard");
   revalidatePath("/history");
   revalidatePath("/profile");
+  updateTag("finance-data");
 }
 
 export function revalidateWalletViews() {
@@ -37,6 +38,7 @@ export function revalidateWalletViews() {
   revalidatePath("/expenses/new");
   revalidatePath("/transfers/new");
   revalidatePath("/top-ups/new");
+  updateTag("finance-data");
 }
 
 export type ChatActionResult = {

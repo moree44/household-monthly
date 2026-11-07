@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -47,6 +47,7 @@ function revalidateWalletViews() {
   revalidatePath("/expenses/new");
   revalidatePath("/transfers/new");
   revalidatePath("/top-ups/new");
+  updateTag("finance-data");
 }
 
 export async function createWalletAction(

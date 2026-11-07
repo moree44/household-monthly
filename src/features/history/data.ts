@@ -1,4 +1,5 @@
 import type { TransactionType } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import type { MonthContext } from "@/lib/date/month";
 import {
@@ -146,7 +147,7 @@ export function groupHistoryItems(items: HistoryItem[]) {
   }, []);
 }
 
-export async function getHistoryData(
+async function loadHistoryData(
   typeFilter: HistoryTypeFilter,
   statusFilter: HistoryStatusFilter,
   weekFilter: HistoryWeekFilter,
@@ -246,4 +247,19 @@ export async function getHistoryData(
     items,
     groups: groupHistoryItems(filteredItems)
   };
+}
+
+// History mengambil semua transaksi sebulan lalu memfilternya di JS; cache
+// per bulan + kombinasi filter membuat navigasi bolak-balik ga bayar query lagi.
+export function getHistoryData(
+  typeFilter: HistoryTypeFilter,
+  statusFilter: HistoryStatusFilter,
+  weekFilter: HistoryWeekFilter,
+  month: MonthContext
+) {
+  return unstable_cache(
+    loadHistoryData,
+    ["history-data", month.key, typeFilter, statusFilter, weekFilter],
+    { tags: ["finance-data"], revalidate: 900 }
+  )(typeFilter, statusFilter, weekFilter, month);
 }

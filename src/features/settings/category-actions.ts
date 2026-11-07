@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
@@ -28,6 +28,7 @@ function revalidateCategoryViews() {
   revalidatePath("/expenses/new");
   revalidatePath("/dashboard");
   revalidatePath("/history");
+  updateTag("finance-data");
 }
 
 export async function createCategoryAction(

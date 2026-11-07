@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { getDashboardData } from "@/features/dashboard/data";
@@ -329,6 +329,7 @@ async function createCategoryByName(name: string) {
 
   revalidatePath("/settings/categories");
   revalidatePath("/expenses/new");
+  updateTag("finance-data");
 
   return { error: null, category: created };
 }
