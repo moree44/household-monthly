@@ -51,7 +51,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="min-h-screen bg-[#262626] px-0 py-0 text-[#171717] sm:px-4 sm:py-6">
-      <div className="app-canvas mx-auto min-h-screen max-w-[430px] bg-[#F5F5F5] px-4 pb-6 pt-6 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px] sm:p-6 wide:max-w-none">
+      <div className="app-canvas mx-auto min-h-screen max-w-[430px] bg-[#F5F5F5] px-4 pb-6 pt-6 shadow-2xl shadow-black/20 sm:min-h-0 sm:rounded-[30px] sm:p-6 wide:p-8">
         <header className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-[#737373]">Halo, {currentUser.displayName}</p>
@@ -82,9 +82,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           nextHref={withMonthParam("/dashboard", dashboard.nextMonthKey)}
         />
 
-        <section className="mt-5 rounded-[22px] bg-[#171717] p-5 text-white shadow-xl shadow-black/15">
+        <section className="mt-5 rounded-[22px] bg-[#171717] p-5 text-white shadow-xl shadow-black/15 wide:p-6">
           <p className="text-xs font-semibold uppercase tracking-normal text-[#A3A3A3]">total saldo</p>
-          <p className="mt-2 text-4xl tracking-normal">
+          <p className="mt-2 text-4xl tracking-normal wide:text-5xl">
             <PrivateAmount value={dashboard.totalWalletBalance} />
           </p>
           <div className="mt-5 grid grid-cols-2 gap-3">

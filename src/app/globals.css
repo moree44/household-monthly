@@ -100,7 +100,7 @@ a {
   .app-canvas {
     margin-left: 16rem;
     margin-right: 1.25rem;
-    max-width: 88rem;
+    max-width: 72rem;
     min-height: calc(100vh - 2.5rem);
   }
 
