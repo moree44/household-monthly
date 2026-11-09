@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb"
+    },
+    // Navigasi balik ke halaman dinamis dalam 60 detik paint instan dari
+    // client router cache; mutasi tetap fresh karena updateTag di server action.
+    staleTimes: {
+      dynamic: 60
     }
   },
   outputFileTracingIncludes: {
